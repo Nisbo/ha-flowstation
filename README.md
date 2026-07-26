@@ -48,7 +48,7 @@ type: custom:ha-flowstation-card
 entity: sensor.flowstation_flowstation
 title: FlowStation
 max_last_heard: 10
-default_tab: timeslots
+default_tab: dashboard
    ```
 
 ## Optionen
@@ -58,7 +58,7 @@ default_tab: timeslots
 | `entity` | `sensor.flowstation_flowstation` | FlowStation-Sensor |
 | `title` | `FlowStation` | Überschrift |
 | `max_last_heard` | `10` | Anzahl der angezeigten Einträge |
-| `default_tab` | `timeslots` | Beim ersten Laden geöffneter Tab |
+| `default_tab` | `dashboard` | Beim ersten Laden geöffneter Tab |
 | `show_active_calls` | `true` | Tabelle der aktiven Calls |
 | `show_registered_devices` | `true` | Registrierte Geräte anzeigen |
 | `show_last_heard` | `true` | „Zuletzt gehört“ anzeigen |
@@ -80,6 +80,8 @@ Für `default_tab` sind folgende Werte möglich:
 
 ```text
 timeslots
+dashboard
+base_station
 active_calls
 registered_devices
 last_heard

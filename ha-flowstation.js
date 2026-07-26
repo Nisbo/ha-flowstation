@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.3.0";
+const CARD_VERSION = "0.4.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -25,7 +25,7 @@ class HaFlowStationCard extends HTMLElement {
       entity: "sensor.flowstation_flowstation",
       title: "FlowStation",
       max_last_heard: 10,
-      default_tab: "timeslots",
+      default_tab: "dashboard",
     };
   }
 
@@ -233,8 +233,6 @@ class HaFlowStationCard extends HTMLElement {
     const flowstationOnline =
       !unavailable && Boolean(attributes.flowstation_online);
     const brewOnline = !unavailable && Boolean(attributes.brew_online);
-    const activeCalls = Number(attributes.active_calls ?? entity.state);
-    const callCount = Number.isFinite(activeCalls) ? activeCalls : calls.length;
     const maxLastHeard = Math.max(
       1,
       Number(this._config.max_last_heard) || 10,
@@ -259,32 +257,8 @@ class HaFlowStationCard extends HTMLElement {
             </div>
           </header>
 
-          <section class="overview-grid">
-            <article class="panel call-counter">
-              <h2>Aktive Calls</h2>
-              <div class="counter ${callCount > 0 ? "active" : ""}">${callCount}</div>
-              <div class="muted">Aktive Gespräche</div>
-              <div class="registered-summary">
-                <ha-icon icon="mdi:radio-handheld"></ha-icon>
-                ${devices.length} registriert
-              </div>
-            </article>
-
-            <article class="panel base-panel">
-              <h2>Basisstation</h2>
-              <div class="metrics">
-                ${this._metric("Downlink (TX)", this._frequency(attributes.tx_freq_hz), "mdi:arrow-down-bold")}
-                ${this._metric("Uplink (RX)", this._frequency(attributes.rx_freq_hz), "mdi:arrow-up-bold")}
-                ${this._metric("Duplexabstand", this._frequency(attributes.shift_hz), "mdi:swap-vertical-bold")}
-                ${this._metric("Carrier", this._value(attributes.main_carrier), "mdi:sine-wave")}
-                ${this._metric("MCC / MNC", `${this._value(attributes.mcc)} / ${this._value(attributes.mnc)}`, "mdi:identifier")}
-                ${this._metric("Hangtime", this._number(attributes.hangtime_secs, 0, " s"), "mdi:timer-outline")}
-                ${this._metric("Nachbarzellen", this._value(attributes.neighbor_count, "0"), "mdi:access-point-network")}
-              </div>
-            </article>
-          </section>
-
           ${this._tabbedContent(
+            attributes,
             slots,
             calls,
             devices,
@@ -328,8 +302,27 @@ class HaFlowStationCard extends HTMLElement {
     `;
   }
 
-  _tabbedContent(slots, calls, devices, lastHeard, maxLastHeard) {
+  _tabbedContent(
+    attributes,
+    slots,
+    calls,
+    devices,
+    lastHeard,
+    maxLastHeard,
+  ) {
     const availableTabs = [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: "mdi:view-dashboard-outline",
+        count: null,
+      },
+      {
+        id: "base_station",
+        label: "Basisstation",
+        icon: "mdi:radio-tower",
+        count: null,
+      },
       {
         id: "timeslots",
         label: "Timeslots",
@@ -385,6 +378,8 @@ class HaFlowStationCard extends HTMLElement {
       .join("");
 
     const content = {
+      dashboard: () => this._dashboard(attributes, slots, calls, devices),
+      base_station: () => this._baseStation(attributes),
       timeslots: () => this._timeslots(slots, true),
       active_calls: () => this._activeCalls(calls, true),
       registered_devices: () => this._registeredDevices(devices, true),
@@ -396,6 +391,106 @@ class HaFlowStationCard extends HTMLElement {
         <div class="tabs-scroll" role="tablist">${tabs}</div>
         <div class="tab-content" role="tabpanel">${content}</div>
       </section>
+    `;
+  }
+
+  _baseStation(attributes) {
+    return `
+      <div class="base-station-tab">
+        <div class="base-station-heading">
+          <div class="base-station-symbol">
+            <ha-icon icon="mdi:radio-tower"></ha-icon>
+          </div>
+          <div>
+            <h2>Basisstation</h2>
+            <span>Funk- und Netzwerkparameter</span>
+          </div>
+        </div>
+        <div class="metrics">
+          ${this._metric("Downlink (TX)", this._frequency(attributes.tx_freq_hz), "mdi:arrow-down-bold")}
+          ${this._metric("Uplink (RX)", this._frequency(attributes.rx_freq_hz), "mdi:arrow-up-bold")}
+          ${this._metric("Duplexabstand", this._frequency(attributes.shift_hz), "mdi:swap-vertical-bold")}
+          ${this._metric("Carrier", this._value(attributes.main_carrier), "mdi:sine-wave")}
+          ${this._metric("MCC / MNC", `${this._value(attributes.mcc)} / ${this._value(attributes.mnc)}`, "mdi:identifier")}
+          ${this._metric("Hangtime", this._number(attributes.hangtime_secs, 0, " s"), "mdi:timer-outline")}
+          ${this._metric("Nachbarzellen", this._value(attributes.neighbor_count, "0"), "mdi:access-point-network")}
+        </div>
+      </div>
+    `;
+  }
+
+  _dashboard(attributes, slots, calls, devices) {
+    const slotCards = ["1", "2", "3", "4"]
+      .map((number) => this._slotCard(number, slots[number] || {}))
+      .join("");
+
+    return `
+      <div class="dashboard-tab">
+        <section class="rf-channel">
+          <div class="rf-heading">
+            <div>
+              <span class="eyebrow">RF Channel</span>
+              <strong>Carrier #${this._value(attributes.main_carrier)}</strong>
+            </div>
+            <div class="rf-frequencies">
+              <span>DL ${this._frequency(attributes.tx_freq_hz)}</span>
+              <span>UL ${this._frequency(attributes.rx_freq_hz)}</span>
+            </div>
+          </div>
+          <div class="slot-card-grid">${slotCards}</div>
+        </section>
+
+        ${calls.length ? `
+          <section class="dashboard-section">
+            <div class="dashboard-section-heading">
+              <h3>Aktive Calls</h3>
+              <span class="live-badge"><span></span>${calls.length} aktiv</span>
+            </div>
+            ${this._activeCalls(calls, true)}
+          </section>
+        ` : ""}
+
+        <section class="dashboard-section">
+          <div class="dashboard-section-heading">
+            <h3>Registrierte Geräte</h3>
+            <span class="count-badge">${devices.length}</span>
+          </div>
+          ${this._registeredDevices(devices, true)}
+        </section>
+      </div>
+    `;
+  }
+
+  _slotCard(number, slot) {
+    const active = Boolean(slot.active);
+    const label = active
+      ? (slot.source_callsign || slot.source || this._callType(slot.type))
+      : "Frei";
+    const detail = active
+      ? `Ziel ${this._value(slot.destination)}`
+      : "Idle";
+
+    return `
+      <article class="slot-card ${active ? "active" : "idle"}">
+        <div class="slot-card-top">
+          <strong>TS ${number}</strong>
+          <span class="slot-state">${active ? "ACTIVE" : "IDLE"}</span>
+        </div>
+        <div class="slot-visual">
+          <span class="radio-pulse"></span>
+          <div class="signal-bars" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+        <div class="slot-main">${this._escape(label)}</div>
+        <div class="slot-detail">${detail}</div>
+        ${active ? `
+          <div class="slot-meta">
+            <span>${this._callType(slot.type)}</span>
+            <span>Sprecher ${this._value(slot.speaker_callsign || slot.speaker)}</span>
+          </div>
+        ` : ""}
+      </article>
     `;
   }
 
@@ -673,12 +768,6 @@ class HaFlowStationCard extends HTMLElement {
 
         .status-value { margin-top: 4px; }
 
-        .overview-grid {
-          display: grid;
-          grid-template-columns: minmax(200px, 240px) 1fr;
-          gap: 16px;
-        }
-
         .panel {
           min-width: 0;
           padding: 18px;
@@ -687,42 +776,7 @@ class HaFlowStationCard extends HTMLElement {
           background: var(--fs-panel);
         }
 
-        .call-counter {
-          display: flex;
-          flex-direction: column;
-          text-align: center;
-        }
-
-        .call-counter h2 { text-align: left; }
-
-        .counter {
-          margin: auto 0 4px;
-          color: var(--fs-green);
-          font-size: 5rem;
-          font-weight: 400;
-          line-height: 1;
-          text-shadow: 0 0 18px rgba(57,209,38,.22);
-        }
-
-        .counter.active {
-          animation: pulse 1.8s ease-in-out infinite;
-        }
-
         .muted { color: var(--secondary-text-color); }
-
-        .registered-summary {
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 6px;
-          margin-top: 14px;
-          padding-top: 12px;
-          border-top: 1px solid var(--fs-border);
-          color: var(--secondary-text-color);
-          font-size: .9rem;
-        }
-
-        .registered-summary ha-icon { --mdc-icon-size: 18px; }
 
         .metrics {
           display: grid;
@@ -848,6 +902,263 @@ class HaFlowStationCard extends HTMLElement {
 
         .tab-content { padding: 16px; }
 
+        .base-station-tab {
+          display: grid;
+          gap: 18px;
+        }
+
+        .base-station-heading {
+          display: flex;
+          align-items: center;
+          gap: 13px;
+        }
+
+        .base-station-heading h2 { margin: 0 0 4px; }
+
+        .base-station-heading span {
+          color: var(--secondary-text-color);
+          font-size: .85rem;
+        }
+
+        .base-station-symbol {
+          display: grid;
+          place-items: center;
+          width: 48px;
+          height: 48px;
+          border-radius: 13px;
+          color: var(--fs-green);
+          background: var(--fs-green-soft);
+        }
+
+        .base-station-symbol ha-icon { --mdc-icon-size: 28px; }
+
+        .dashboard-tab {
+          display: grid;
+          gap: 18px;
+        }
+
+        .rf-channel {
+          overflow: hidden;
+          border: 1px solid color-mix(in srgb, var(--primary-color, #42a5f5) 32%, var(--fs-border));
+          border-radius: 13px;
+          background:
+            radial-gradient(circle at 50% 0%, rgba(66,165,245,.07), transparent 45%),
+            rgba(8,18,32,.2);
+        }
+
+        .rf-heading {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 18px;
+          padding: 15px 17px;
+          border-bottom: 1px solid var(--fs-border);
+        }
+
+        .rf-heading > div:first-child {
+          display: grid;
+          gap: 4px;
+        }
+
+        .eyebrow {
+          color: var(--secondary-text-color);
+          font-size: .7rem;
+          font-weight: 800;
+          letter-spacing: .14em;
+          text-transform: uppercase;
+        }
+
+        .rf-heading strong {
+          font-family: var(--code-font-family, monospace);
+          letter-spacing: .06em;
+          text-transform: uppercase;
+        }
+
+        .rf-frequencies {
+          display: flex;
+          gap: 16px;
+          color: color-mix(in srgb, var(--primary-color, #42a5f5) 72%, var(--secondary-text-color));
+          font-family: var(--code-font-family, monospace);
+          font-size: .8rem;
+        }
+
+        .slot-card-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(155px, 1fr));
+          gap: 10px;
+          padding: 14px;
+        }
+
+        .slot-card {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          min-height: 190px;
+          padding: 13px;
+          overflow: hidden;
+          border: 1px solid var(--fs-border);
+          border-radius: 12px;
+          background: rgba(70,105,150,.055);
+          transition:
+            border-color .25s ease,
+            background .25s ease,
+            box-shadow .25s ease;
+        }
+
+        .slot-card.active {
+          border-color: color-mix(in srgb, var(--fs-green) 58%, transparent);
+          background:
+            radial-gradient(circle at 50% 40%, rgba(57,209,38,.18), transparent 55%),
+            linear-gradient(150deg, rgba(57,209,38,.12), rgba(20,50,35,.08));
+          box-shadow:
+            inset 0 0 35px rgba(57,209,38,.055),
+            0 0 16px rgba(57,209,38,.07);
+        }
+
+        .slot-card-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+          color: var(--secondary-text-color);
+          font-family: var(--code-font-family, monospace);
+          font-size: .76rem;
+          letter-spacing: .1em;
+        }
+
+        .slot-card.active .slot-card-top strong,
+        .slot-card.active .slot-state {
+          color: var(--fs-green);
+        }
+
+        .slot-state { font-size: .65rem; }
+
+        .slot-visual {
+          display: grid;
+          justify-items: center;
+          gap: 13px;
+          margin: 14px 0 8px;
+        }
+
+        .radio-pulse {
+          width: 17px;
+          height: 17px;
+          border-radius: 50%;
+          background: rgba(130,155,185,.12);
+        }
+
+        .slot-card.active .radio-pulse {
+          background: var(--fs-green);
+          box-shadow:
+            0 0 0 7px rgba(57,209,38,.13),
+            0 0 0 13px rgba(57,209,38,.06),
+            0 0 18px rgba(57,209,38,.65);
+          animation: radioPulse 1.6s ease-in-out infinite;
+        }
+
+        .signal-bars {
+          display: flex;
+          align-items: end;
+          gap: 3px;
+          height: 27px;
+        }
+
+        .signal-bars i {
+          display: block;
+          width: 4px;
+          height: 5px;
+          border-radius: 2px 2px 0 0;
+          background: rgba(130,155,185,.14);
+        }
+
+        .slot-card.active .signal-bars i {
+          background: var(--fs-green);
+          animation: signalBar 1s ease-in-out infinite alternate;
+        }
+
+        .signal-bars i:nth-child(1),
+        .signal-bars i:nth-child(7) { height: 9px; animation-delay: -.1s; }
+        .signal-bars i:nth-child(2),
+        .signal-bars i:nth-child(6) { height: 17px; animation-delay: -.35s; }
+        .signal-bars i:nth-child(3),
+        .signal-bars i:nth-child(5) { height: 25px; animation-delay: -.6s; }
+        .signal-bars i:nth-child(4) { height: 14px; animation-delay: -.8s; }
+
+        .slot-main {
+          overflow: hidden;
+          max-width: 100%;
+          color: var(--secondary-text-color);
+          font-family: var(--code-font-family, monospace);
+          font-size: 1rem;
+          font-weight: 800;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .slot-card.active .slot-main { color: var(--fs-green); }
+
+        .slot-detail {
+          margin-top: 5px;
+          color: var(--secondary-text-color);
+          font-family: var(--code-font-family, monospace);
+          font-size: .74rem;
+        }
+
+        .slot-meta {
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          width: calc(100% + 26px);
+          margin: auto -13px -13px;
+          padding: 8px 10px;
+          border-top: 1px solid rgba(57,209,38,.15);
+          color: var(--secondary-text-color);
+          background: rgba(0,0,0,.1);
+          font-size: .67rem;
+        }
+
+        .dashboard-section {
+          padding-top: 2px;
+        }
+
+        .dashboard-section + .dashboard-section {
+          padding-top: 18px;
+          border-top: 1px solid var(--fs-border);
+        }
+
+        .dashboard-section-heading {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 0 3px 12px;
+        }
+
+        .dashboard-section-heading h3 {
+          margin: 0;
+          font-size: 1rem;
+        }
+
+        .live-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 3px 8px;
+          border-radius: 999px;
+          color: var(--fs-green);
+          background: var(--fs-green-soft);
+          font-size: .72rem;
+          font-weight: 700;
+        }
+
+        .live-badge span {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: var(--fs-green);
+          box-shadow: 0 0 7px var(--fs-green);
+        }
+
         table {
           width: 100%;
           border-collapse: collapse;
@@ -944,15 +1255,21 @@ class HaFlowStationCard extends HTMLElement {
         .error div { display: grid; gap: 4px; }
         .error span { color: var(--secondary-text-color); }
 
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: .62; }
+        @keyframes radioPulse {
+          0%, 100% { transform: scale(.94); }
+          50% { transform: scale(1.08); }
+        }
+
+        @keyframes signalBar {
+          from { opacity: .35; transform: scaleY(.45); }
+          to { opacity: 1; transform: scaleY(1); }
         }
 
         @media (max-width: 1100px) {
           .hero { align-items: flex-start; }
           .status-grid { grid-template-columns: 1fr; width: min(270px, 42%); }
           .metrics { grid-template-columns: repeat(3, 1fr); }
+          .slot-card-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 760px) {
@@ -972,10 +1289,7 @@ class HaFlowStationCard extends HTMLElement {
           .status-icon ha-icon { --mdc-icon-size: 26px; }
           .status-label { font-size: .8rem; }
           .status-value { font-size: .8rem; }
-          .overview-grid { grid-template-columns: 1fr; }
-          .call-counter { min-height: 210px; }
           .metrics { grid-template-columns: repeat(2, 1fr); }
-          .base-panel { padding: 14px; }
           .tab-button {
             flex: 1 0 auto;
             padding: 10px;
@@ -985,6 +1299,16 @@ class HaFlowStationCard extends HTMLElement {
         @media (max-width: 520px) {
           .subtitle { font-size: .9rem; }
           .metrics { grid-template-columns: 1fr; }
+          .rf-heading {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+          .rf-frequencies {
+            flex-wrap: wrap;
+            gap: 5px 12px;
+          }
+          .slot-card-grid { grid-template-columns: 1fr; }
+          .slot-card { min-height: 176px; }
 
           table, thead, tbody, tr, th, td { display: block; }
           thead { display: none; }
