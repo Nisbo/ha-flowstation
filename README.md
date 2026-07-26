@@ -65,9 +65,12 @@ compact_timeslots: false
 | `max_last_heard` | `10` | Anzahl der angezeigten Einträge |
 | `default_tab` | `dashboard` | Beim ersten Laden geöffneter Tab |
 | `compact_timeslots` | `false` | Kompakte Dashboard-Timeslots mit etwa halber Höhe |
-| `show_active_calls` | `true` | Tabelle der aktiven Calls |
-| `show_registered_devices` | `true` | Registrierte Geräte anzeigen |
-| `show_last_heard` | `true` | „Zuletzt gehört“ anzeigen |
+| `hide_dashboard` | `false` | Tab „Dashboard“ ausblenden |
+| `hide_base_station` | `false` | Tab „Basisstation“ ausblenden |
+| `hide_timeslots` | `false` | Tab „Timeslots“ ausblenden |
+| `hide_active_calls` | `false` | Tab „Aktive Calls“ ausblenden |
+| `hide_registered_devices` | `false` | Tab „Registrierte Geräte“ ausblenden |
+| `hide_last_heard` | `false` | Tab „Zuletzt gehört“ ausblenden |
 
 ## Vollständiges Beispiel
 
@@ -78,9 +81,12 @@ title: FlowStation
 max_last_heard: 15
 default_tab: last_heard
 compact_timeslots: true
-show_active_calls: true
-show_registered_devices: true
-show_last_heard: true
+hide_dashboard: false
+hide_base_station: false
+hide_timeslots: false
+hide_active_calls: false
+hide_registered_devices: false
+hide_last_heard: false
 ```
 
 Für `default_tab` sind folgende Werte möglich:

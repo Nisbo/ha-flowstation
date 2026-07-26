@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.6.0";
+const CARD_VERSION = "0.7.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -27,9 +27,12 @@ class HaFlowStationCard extends HTMLElement {
       max_last_heard: 10,
       default_tab: "dashboard",
       compact_timeslots: false,
-      show_active_calls: true,
-      show_registered_devices: true,
-      show_last_heard: true,
+      hide_dashboard: false,
+      hide_base_station: false,
+      hide_timeslots: false,
+      hide_active_calls: false,
+      hide_registered_devices: false,
+      hide_last_heard: false,
     };
   }
 
@@ -39,64 +42,34 @@ class HaFlowStationCard extends HTMLElement {
       title: "Titel",
       default_tab: "Standard-Tab",
       compact_timeslots: "Kompakte Timeslot-Kacheln",
-      max_last_heard: "Anzahl „Zuletzt gehört“",
-      show_active_calls: "Tab „Aktive Calls“ anzeigen",
-      show_registered_devices: "Tab „Registrierte Geräte“ anzeigen",
-      show_last_heard: "Tab „Zuletzt gehört“ anzeigen",
+      max_last_heard: "Angezeigte „Zuletzt gehört“-Einträge",
+      hide_dashboard: "Tab „Dashboard“ ausblenden",
+      hide_base_station: "Tab „Basisstation“ ausblenden",
+      hide_timeslots: "Tab „Timeslots“ ausblenden",
+      hide_active_calls: "Tab „Aktive Calls“ ausblenden",
+      hide_registered_devices: "Tab „Registrierte Geräte“ ausblenden",
+      hide_last_heard: "Tab „Zuletzt gehört“ ausblenden",
     };
 
     const helpers = {
       entity: "MQTT-Discovery-Sensor der FlowStation-Bridge.",
       default_tab: "Dieser Tab wird beim ersten Öffnen der Karte angezeigt.",
       compact_timeslots: "Reduziert die Höhe der grafischen Timeslot-Kacheln ungefähr um die Hälfte.",
-      max_last_heard: "Begrenzt nur die Anzeige; die Bridge behält weiterhin ihre Historie.",
+      max_last_heard: "Begrenzt die sichtbaren Tabellenzeilen. Der Zähler am Tab zeigt weiterhin die Gesamtanzahl der vorhandenen Einträge.",
     };
 
     return {
       schema: [
         {
-          type: "grid",
-          name: "",
-          flatten: true,
-          column_min_width: "220px",
-          schema: [
-            {
-              name: "entity",
-              required: true,
-              selector: {
-                entity: {
-                  filter: {
-                    domain: "sensor",
-                  },
-                },
+          name: "entity",
+          required: true,
+          selector: {
+            entity: {
+              filter: {
+                domain: "sensor",
               },
             },
-            {
-              name: "title",
-              selector: {
-                text: {},
-              },
-            },
-            {
-              name: "default_tab",
-              selector: {
-                select: {
-                  mode: "dropdown",
-                  options: [
-                    { value: "dashboard", label: "Dashboard" },
-                    { value: "base_station", label: "Basisstation" },
-                    { value: "timeslots", label: "Timeslots" },
-                    { value: "active_calls", label: "Aktive Calls" },
-                    {
-                      value: "registered_devices",
-                      label: "Registrierte Geräte",
-                    },
-                    { value: "last_heard", label: "Zuletzt gehört" },
-                  ],
-                },
-              },
-            },
-          ],
+          },
         },
         {
           type: "expandable",
@@ -104,6 +77,12 @@ class HaFlowStationCard extends HTMLElement {
           title: "Darstellung",
           flatten: true,
           schema: [
+            {
+              name: "title",
+              selector: {
+                text: {},
+              },
+            },
             {
               name: "compact_timeslots",
               selector: {
@@ -130,19 +109,56 @@ class HaFlowStationCard extends HTMLElement {
           flatten: true,
           schema: [
             {
-              name: "show_active_calls",
+              name: "default_tab",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "dashboard", label: "Dashboard" },
+                    { value: "base_station", label: "Basisstation" },
+                    { value: "timeslots", label: "Timeslots" },
+                    { value: "active_calls", label: "Aktive Calls" },
+                    {
+                      value: "registered_devices",
+                      label: "Registrierte Geräte",
+                    },
+                    { value: "last_heard", label: "Zuletzt gehört" },
+                  ],
+                },
+              },
+            },
+            {
+              name: "hide_dashboard",
               selector: {
                 boolean: {},
               },
             },
             {
-              name: "show_registered_devices",
+              name: "hide_base_station",
               selector: {
                 boolean: {},
               },
             },
             {
-              name: "show_last_heard",
+              name: "hide_timeslots",
+              selector: {
+                boolean: {},
+              },
+            },
+            {
+              name: "hide_active_calls",
+              selector: {
+                boolean: {},
+              },
+            },
+            {
+              name: "hide_registered_devices",
+              selector: {
+                boolean: {},
+              },
+            },
+            {
+              name: "hide_last_heard",
               selector: {
                 boolean: {},
               },
@@ -181,9 +197,12 @@ class HaFlowStationCard extends HTMLElement {
       max_last_heard: 10,
       default_tab: "dashboard",
       compact_timeslots: false,
-      show_active_calls: true,
-      show_registered_devices: true,
-      show_last_heard: true,
+      hide_dashboard: false,
+      hide_base_station: false,
+      hide_timeslots: false,
+      hide_active_calls: false,
+      hide_registered_devices: false,
+      hide_last_heard: false,
       ...config,
     };
     this._activeTab = this._config.default_tab;
@@ -445,6 +464,13 @@ class HaFlowStationCard extends HTMLElement {
     `;
   }
 
+  _tabVisible(name) {
+    return (
+      this._config[`hide_${name}`] !== true &&
+      this._config[`show_${name}`] !== false
+    );
+  }
+
   _tabbedContent(
     attributes,
     slots,
@@ -454,25 +480,31 @@ class HaFlowStationCard extends HTMLElement {
     maxLastHeard,
   ) {
     const availableTabs = [
-      {
-        id: "dashboard",
-        label: "Dashboard",
-        icon: "mdi:view-dashboard-outline",
-        count: null,
-      },
-      {
-        id: "base_station",
-        label: "Basisstation",
-        icon: "mdi:radio-tower",
-        count: null,
-      },
-      {
-        id: "timeslots",
-        label: "Timeslots",
-        icon: "mdi:view-grid-outline",
-        count: null,
-      },
-      ...(this._config.show_active_calls
+      ...(this._tabVisible("dashboard")
+        ? [{
+            id: "dashboard",
+            label: "Dashboard",
+            icon: "mdi:view-dashboard-outline",
+            count: null,
+          }]
+        : []),
+      ...(this._tabVisible("base_station")
+        ? [{
+            id: "base_station",
+            label: "Basisstation",
+            icon: "mdi:radio-tower",
+            count: null,
+          }]
+        : []),
+      ...(this._tabVisible("timeslots")
+        ? [{
+            id: "timeslots",
+            label: "Timeslots",
+            icon: "mdi:view-grid-outline",
+            count: null,
+          }]
+        : []),
+      ...(this._tabVisible("active_calls")
         ? [{
             id: "active_calls",
             label: "Aktive Calls",
@@ -480,7 +512,7 @@ class HaFlowStationCard extends HTMLElement {
             count: calls.length,
           }]
         : []),
-      ...(this._config.show_registered_devices
+      ...(this._tabVisible("registered_devices")
         ? [{
             id: "registered_devices",
             label: "Registrierte Geräte",
@@ -488,7 +520,7 @@ class HaFlowStationCard extends HTMLElement {
             count: devices.length,
           }]
         : []),
-      ...(this._config.show_last_heard
+      ...(this._tabVisible("last_heard")
         ? [{
             id: "last_heard",
             label: "Zuletzt gehört",
@@ -497,6 +529,18 @@ class HaFlowStationCard extends HTMLElement {
           }]
         : []),
     ];
+
+    if (!availableTabs.length) {
+      return `
+        <section class="panel no-tabs">
+          <ha-icon icon="mdi:tab-remove"></ha-icon>
+          <div>
+            <strong>Keine Bereiche aktiviert</strong>
+            <span>Aktiviere mindestens einen Tab in der Kartenkonfiguration.</span>
+          </div>
+        </section>
+      `;
+    }
 
     if (!availableTabs.some((tab) => tab.id === this._activeTab)) {
       this._activeTab = availableTabs[0].id;
@@ -1474,6 +1518,26 @@ class HaFlowStationCard extends HTMLElement {
           margin-right: 6px;
           vertical-align: -4px;
         }
+
+        .no-tabs {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 13px;
+          min-height: 120px;
+          color: var(--secondary-text-color);
+          text-align: left;
+        }
+
+        .no-tabs ha-icon { --mdc-icon-size: 30px; }
+
+        .no-tabs div {
+          display: grid;
+          gap: 4px;
+        }
+
+        .no-tabs strong { color: var(--primary-text-color); }
+        .no-tabs span { font-size: .85rem; }
 
         .error {
           display: flex;
