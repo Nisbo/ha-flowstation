@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.11.0";
+const CARD_VERSION = "0.12.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -16,8 +16,6 @@ class HaFlowStationCard extends HTMLElement {
     this._entityReceivedAt = Date.now();
     this._timer = null;
     this._activeTab = null;
-    this._tabHover = false;
-    this._renderPending = false;
   }
 
   static getStubConfig() {
@@ -218,11 +216,6 @@ class HaFlowStationCard extends HTMLElement {
       this._entity = nextEntity;
       this._entityReceivedAt = Date.now();
 
-      if (this._tabHover) {
-        this._renderPending = true;
-        return;
-      }
-
       this._render();
     }
   }
@@ -394,7 +387,6 @@ class HaFlowStationCard extends HTMLElement {
           .map(
             (group) => `
               <span class="group-chip ${group === device.selected_group ? "selected" : ""}">
-                ${group === device.selected_group ? '<ha-icon icon="mdi:play"></ha-icon>' : ""}
                 ${this._escape(group)}
               </span>
             `,
@@ -546,20 +538,7 @@ class HaFlowStationCard extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((button) => {
       button.addEventListener("click", () => {
         this._activeTab = button.dataset.tab;
-        this._tabHover = false;
-        this._renderPending = false;
         this._render();
-      });
-      button.addEventListener("mouseenter", () => {
-        this._tabHover = true;
-      });
-      button.addEventListener("mouseleave", () => {
-        this._tabHover = false;
-
-        if (this._renderPending) {
-          this._renderPending = false;
-          this._render();
-        }
       });
     });
   }
@@ -971,7 +950,6 @@ class HaFlowStationCard extends HTMLElement {
                 </td>
                 <td data-label="Ziel">
                   <span class="target-chip ${entry.activity === "call_group" ? "group" : ""}">
-                    ${entry.activity === "call_group" ? "GSSI " : ""}
                     ${this._value(entry.destination)}
                   </span>
                 </td>
@@ -1201,7 +1179,6 @@ class HaFlowStationCard extends HTMLElement {
         }
 
         .tab-button:hover {
-          color: var(--primary-text-color);
           background: rgba(255,255,255,.045);
         }
 
@@ -1677,8 +1654,6 @@ class HaFlowStationCard extends HTMLElement {
           background: var(--fs-green-soft);
           font-weight: 700;
         }
-
-        .group-chip ha-icon { --mdc-icon-size: 10px; }
 
         .rssi-meter {
           display: inline-flex;
