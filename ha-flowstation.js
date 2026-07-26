@@ -4,7 +4,136 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.13.2";
+const CARD_VERSION = "0.14.0";
+
+const TRANSLATIONS = {
+  de: {
+    yes: "Ja",
+    no: "Nein",
+    now: "Jetzt",
+    ago_seconds: "vor {value} s",
+    ago_minutes: "vor {value} min",
+    ago_hours: "vor {hours} h {minutes} min",
+    ago_days: "vor {value} d",
+    group_call: "Gruppenruf",
+    individual_call: "Einzelruf",
+    group: "Gruppe",
+    online: "Online",
+    offline: "Offline",
+    sensor_missing: "FlowStation-Sensor nicht gefunden",
+    tetra_base_station: "TETRA-Basisstation",
+    dashboard: "Dashboard",
+    base_station: "Basisstation",
+    timeslots: "Timeslots",
+    active_calls: "Aktive Calls",
+    registered_devices: "Registrierte Geräte",
+    last_heard: "Zuletzt gehört",
+    no_sections: "Keine Bereiche aktiviert",
+    enable_section: "Aktiviere mindestens einen Tab in der Kartenkonfiguration.",
+    radio_network_parameters: "Funk- und Netzwerkparameter",
+    downlink: "Downlink (TX)",
+    uplink: "Uplink (RX)",
+    duplex_spacing: "Duplexabstand",
+    hangtime: "Hangtime",
+    neighbor_cells: "Nachbarzellen",
+    active: "Aktiv",
+    free: "Frei",
+    idle: "Frei",
+    target: "Ziel",
+    speaker: "Sprecher",
+    control_channel: "Kontrollkanal",
+    type: "Typ",
+    source: "Quelle",
+    callsign: "Rufzeichen",
+    priority: "Priorität",
+    duration: "Dauer",
+    groups: "Gruppen",
+    reception: "Empfang",
+    last_seen: "Zuletzt gesehen",
+    energy_saving: "Energiesparen",
+    time: "Zeit",
+    activity: "Aktivität",
+    direction: "Richtung",
+    from: "Von",
+    to: "An",
+    kind: "Art",
+    message: "Nachricht",
+    message_position: "Nachricht / Position",
+    no_active_calls: "Keine aktiven Gespräche",
+    no_registered_devices: "Keine Geräte registriert",
+    no_activity: "Noch keine Aktivität",
+    no_sds: "Noch keine SDS-Nachrichten",
+    multiple_parts: "Mehrteilig",
+    status: "Status",
+    lip_position: "LIP-Position",
+    position_unavailable: "Position nicht von FlowStation bereitgestellt",
+    position_unavailable_hint: "FlowStation übermittelt für diese binäre LIP-Nachricht keine Koordinaten.",
+    energy_hint: "Energy Economy Group {group}: ungefähr {seconds} s Aufwachintervall",
+  },
+  en: {
+    yes: "Yes",
+    no: "No",
+    now: "Now",
+    ago_seconds: "{value} s ago",
+    ago_minutes: "{value} min ago",
+    ago_hours: "{hours} h {minutes} min ago",
+    ago_days: "{value} d ago",
+    group_call: "Group call",
+    individual_call: "Individual call",
+    group: "Group",
+    online: "Online",
+    offline: "Offline",
+    sensor_missing: "FlowStation sensor not found",
+    tetra_base_station: "TETRA base station",
+    dashboard: "Dashboard",
+    base_station: "Base station",
+    timeslots: "Timeslots",
+    active_calls: "Active calls",
+    registered_devices: "Registered devices",
+    last_heard: "Last heard",
+    no_sections: "No sections enabled",
+    enable_section: "Enable at least one tab in the card configuration.",
+    radio_network_parameters: "Radio and network parameters",
+    downlink: "Downlink (TX)",
+    uplink: "Uplink (RX)",
+    duplex_spacing: "Duplex spacing",
+    hangtime: "Hangtime",
+    neighbor_cells: "Neighbor cells",
+    active: "Active",
+    free: "Free",
+    idle: "Idle",
+    target: "Target",
+    speaker: "Speaker",
+    control_channel: "Control channel",
+    type: "Type",
+    source: "Source",
+    callsign: "Callsign",
+    priority: "Priority",
+    duration: "Duration",
+    groups: "Groups",
+    reception: "Reception",
+    last_seen: "Last seen",
+    energy_saving: "Energy saving",
+    time: "Time",
+    activity: "Activity",
+    direction: "Direction",
+    from: "From",
+    to: "To",
+    kind: "Type",
+    message: "Message",
+    message_position: "Message / position",
+    no_active_calls: "No active calls",
+    no_registered_devices: "No registered devices",
+    no_activity: "No activity yet",
+    no_sds: "No SDS messages yet",
+    multiple_parts: "Multipart",
+    status: "Status",
+    lip_position: "LIP position",
+    position_unavailable: "Position not provided by FlowStation",
+    position_unavailable_hint: "FlowStation does not provide coordinates for this binary LIP message.",
+    energy_hint: "Energy Economy Group {group}: approximately {seconds} s wake-up interval",
+  },
+};
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -22,6 +151,7 @@ class HaFlowStationCard extends HTMLElement {
     return {
       entity: "sensor.flowstation_flowstation",
       title: "FlowStation",
+      language: "auto",
       max_last_heard: 10,
       max_sds_entries: 20,
       default_tab: "dashboard",
@@ -38,9 +168,17 @@ class HaFlowStationCard extends HTMLElement {
   }
 
   static getConfigForm() {
-    const labels = {
+    const editorLanguage = String(
+      globalThis.document?.documentElement?.lang ||
+      globalThis.navigator?.language ||
+      "en",
+    ).toLowerCase().startsWith("de")
+      ? "de"
+      : "en";
+    const labelsDe = {
       entity: "FlowStation-Sensor",
       title: "Titel",
+      language: "Sprache / Language",
       default_tab: "Standard-Tab",
       compact_timeslots: "Kompakte Timeslot-Kacheln",
       localized_timestamps: "Datumsangaben im Home-Assistant-Format",
@@ -54,8 +192,24 @@ class HaFlowStationCard extends HTMLElement {
       hide_last_heard: "Tab „Zuletzt gehört“ ausblenden",
       hide_sds: "Tab „SDS“ ausblenden",
     };
-
-    const helpers = {
+    const labelsEn = {
+      entity: "FlowStation sensor",
+      title: "Title",
+      language: "Language / Sprache",
+      default_tab: "Default tab",
+      compact_timeslots: "Compact Timeslot tiles",
+      localized_timestamps: "Dates in Home Assistant format",
+      max_last_heard: "Displayed Last heard entries",
+      max_sds_entries: "Displayed SDS entries",
+      hide_dashboard: "Hide Dashboard tab",
+      hide_base_station: "Hide Base station tab",
+      hide_timeslots: "Hide Timeslots tab",
+      hide_active_calls: "Hide Active calls tab",
+      hide_registered_devices: "Hide Registered devices tab",
+      hide_last_heard: "Hide Last heard tab",
+      hide_sds: "Hide SDS tab",
+    };
+    const helpersDe = {
       entity: "MQTT-Discovery-Sensor der FlowStation-Bridge.",
       default_tab: "Dieser Tab wird beim ersten Öffnen der Karte angezeigt.",
       compact_timeslots: "Reduziert die Höhe der grafischen Timeslot-Kacheln ungefähr um die Hälfte.",
@@ -63,6 +217,33 @@ class HaFlowStationCard extends HTMLElement {
       max_last_heard: "Begrenzt die sichtbaren Tabellenzeilen. Der Zähler am Tab zeigt weiterhin die Gesamtanzahl der vorhandenen Einträge.",
       max_sds_entries: "Begrenzt die sichtbaren SDS-Zeilen. Die Bridge behält standardmäßig die letzten 50 Einträge.",
     };
+    const helpersEn = {
+      entity: "MQTT Discovery sensor provided by the FlowStation bridge.",
+      default_tab: "This tab is shown when the card is opened for the first time.",
+      compact_timeslots: "Reduces the height of the graphical Timeslot tiles by approximately half.",
+      localized_timestamps: "Uses the language and 12-/24-hour format of the signed-in Home Assistant user.",
+      max_last_heard: "Limits the visible table rows. The tab badge still shows the total number of entries.",
+      max_sds_entries: "Limits visible SDS rows. By default, the bridge retains the latest 50 entries.",
+    };
+    const labels = editorLanguage === "de" ? labelsDe : labelsEn;
+    const helpers = editorLanguage === "de" ? helpersDe : helpersEn;
+    const editorText = editorLanguage === "de"
+      ? {
+          appearance: "Darstellung",
+          sections: "Bereiche",
+          baseStation: "Basisstation",
+          activeCalls: "Aktive Calls",
+          registeredDevices: "Registrierte Geräte",
+          lastHeard: "Zuletzt gehört",
+        }
+      : {
+          appearance: "Appearance",
+          sections: "Sections",
+          baseStation: "Base station",
+          activeCalls: "Active calls",
+          registeredDevices: "Registered devices",
+          lastHeard: "Last heard",
+        };
 
     return {
       schema: [
@@ -80,13 +261,26 @@ class HaFlowStationCard extends HTMLElement {
         {
           type: "expandable",
           name: "",
-          title: "Darstellung",
+          title: editorText.appearance,
           flatten: true,
           schema: [
             {
               name: "title",
               selector: {
                 text: {},
+              },
+            },
+            {
+              name: "language",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "auto", label: "Auto" },
+                    { value: "de", label: "Deutsch" },
+                    { value: "en", label: "English" },
+                  ],
+                },
               },
             },
             {
@@ -128,7 +322,7 @@ class HaFlowStationCard extends HTMLElement {
         {
           type: "expandable",
           name: "",
-          title: "Bereiche",
+          title: editorText.sections,
           flatten: true,
           schema: [
             {
@@ -138,14 +332,14 @@ class HaFlowStationCard extends HTMLElement {
                   mode: "dropdown",
                   options: [
                     { value: "dashboard", label: "Dashboard" },
-                    { value: "base_station", label: "Basisstation" },
+                    { value: "base_station", label: editorText.baseStation },
                     { value: "timeslots", label: "Timeslots" },
-                    { value: "active_calls", label: "Aktive Calls" },
+                    { value: "active_calls", label: editorText.activeCalls },
                     {
                       value: "registered_devices",
-                      label: "Registrierte Geräte",
+                      label: editorText.registeredDevices,
                     },
-                    { value: "last_heard", label: "Zuletzt gehört" },
+                    { value: "last_heard", label: editorText.lastHeard },
                     { value: "sds", label: "SDS" },
                   ],
                 },
@@ -200,6 +394,12 @@ class HaFlowStationCard extends HTMLElement {
       computeHelper: (schema) => helpers[schema.name],
       assertConfig: (config) => {
         if (
+          config.language !== undefined &&
+          !["auto", "de", "en"].includes(config.language)
+        ) {
+          throw new Error("Ungültige Sprache / Invalid language.");
+        }
+        if (
           config.default_tab !== undefined &&
           ![
             "dashboard",
@@ -225,6 +425,7 @@ class HaFlowStationCard extends HTMLElement {
     this._config = {
       entity: "sensor.flowstation_flowstation",
       title: "FlowStation",
+      language: "auto",
       max_last_heard: 10,
       max_sds_entries: 20,
       default_tab: "dashboard",
@@ -291,6 +492,34 @@ class HaFlowStationCard extends HTMLElement {
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  _language() {
+    if (["de", "en"].includes(this._config.language)) {
+      return this._config.language;
+    }
+
+    const language =
+      this._hass?.locale?.language ||
+      globalThis.navigator?.language ||
+      "en";
+    return String(language).toLowerCase().startsWith("de")
+      ? "de"
+      : "en";
+  }
+
+  _t(key, values = {}) {
+    const language = this._language();
+    let text =
+      TRANSLATIONS[language]?.[key] ??
+      TRANSLATIONS.en[key] ??
+      key;
+
+    Object.entries(values).forEach(([name, value]) => {
+      text = text.replaceAll(`{${name}}`, String(value));
+    });
+
+    return text;
   }
 
   _value(value, fallback = "–") {
@@ -365,7 +594,7 @@ class HaFlowStationCard extends HTMLElement {
 
   _bool(value) {
     if (value === null || value === undefined) return "–";
-    return value ? "Ja" : "Nein";
+    return this._t(value ? "yes" : "no");
   }
 
   _duration(call) {
@@ -398,15 +627,23 @@ class HaFlowStationCard extends HTMLElement {
 
   _lastSeenLabel(seconds) {
     const value = Math.max(0, Number(seconds) || 0);
-    if (value < 5) return "Jetzt";
-    if (value < 60) return `vor ${Math.floor(value)} s`;
-    if (value < 3600) return `vor ${Math.floor(value / 60)} min`;
+    if (value < 5) return this._t("now");
+    if (value < 60) {
+      return this._t("ago_seconds", { value: Math.floor(value) });
+    }
+    if (value < 3600) {
+      return this._t("ago_minutes", {
+        value: Math.floor(value / 60),
+      });
+    }
     if (value < 86400) {
       const hours = Math.floor(value / 3600);
       const minutes = Math.floor((value % 3600) / 60);
-      return `vor ${hours} h ${minutes} min`;
+      return this._t("ago_hours", { hours, minutes });
     }
-    return `vor ${Math.floor(value / 86400)} d`;
+    return this._t("ago_days", {
+      value: Math.floor(value / 86400),
+    });
   }
 
   _lastSeen(device) {
@@ -496,8 +733,11 @@ class HaFlowStationCard extends HTMLElement {
 
     return `
       <span
-        class="energy-pill ${quality}"
-        title="Energy Economy Group ${normalized}: ungefähr ${normalized} s Aufwachintervall"
+      class="energy-pill ${quality}"
+        title="${this._escape(this._t("energy_hint", {
+          group: normalized,
+          seconds: normalized,
+        }))}"
       >
         <ha-icon icon="mdi:battery-clock-outline"></ha-icon>
         EG${normalized}
@@ -508,8 +748,8 @@ class HaFlowStationCard extends HTMLElement {
 
   _activity(value) {
     const labels = {
-      call_group: "Gruppenruf",
-      call_individual: "Einzelruf",
+      call_group: this._t("group_call"),
+      call_individual: this._t("individual_call"),
       sds: "SDS",
     };
     return labels[value] || value || "–";
@@ -517,15 +757,15 @@ class HaFlowStationCard extends HTMLElement {
 
   _callType(value) {
     const labels = {
-      group: "Gruppe",
-      individual: "Einzelruf",
+      group: this._t("group"),
+      individual: this._t("individual_call"),
     };
     return labels[value] || value || "–";
   }
 
   _statusTile(label, icon, online) {
     const stateClass = online ? "online" : "offline";
-    const stateText = online ? "Online" : "Offline";
+    const stateText = this._t(online ? "online" : "offline");
 
     return `
       <div class="status-tile ${stateClass}">
@@ -562,7 +802,7 @@ class HaFlowStationCard extends HTMLElement {
           <div class="error">
             <ha-icon icon="mdi:alert-circle-outline"></ha-icon>
             <div>
-              <strong>FlowStation-Sensor nicht gefunden</strong>
+              <strong>${this._t("sensor_missing")}</strong>
               <span>${this._escape(this._config.entity)}</span>
             </div>
           </div>
@@ -606,7 +846,7 @@ class HaFlowStationCard extends HTMLElement {
               <h1>${this._escape(this._config.title)}</h1>
               <div class="subtitle">
                 <ha-icon icon="mdi:radio-tower"></ha-icon>
-                TETRA-Basisstation
+                ${this._t("tetra_base_station")}
               </div>
             </div>
             <div class="status-grid">
@@ -668,7 +908,7 @@ class HaFlowStationCard extends HTMLElement {
       ...(this._tabVisible("dashboard")
         ? [{
             id: "dashboard",
-            label: "Dashboard",
+            label: this._t("dashboard"),
             icon: "mdi:view-dashboard-outline",
             count: null,
           }]
@@ -676,7 +916,7 @@ class HaFlowStationCard extends HTMLElement {
       ...(this._tabVisible("base_station")
         ? [{
             id: "base_station",
-            label: "Basisstation",
+            label: this._t("base_station"),
             icon: "mdi:radio-tower",
             count: null,
           }]
@@ -684,7 +924,7 @@ class HaFlowStationCard extends HTMLElement {
       ...(this._tabVisible("timeslots")
         ? [{
             id: "timeslots",
-            label: "Timeslots",
+            label: this._t("timeslots"),
             icon: "mdi:view-grid-outline",
             count: null,
           }]
@@ -692,7 +932,7 @@ class HaFlowStationCard extends HTMLElement {
       ...(this._tabVisible("active_calls")
         ? [{
             id: "active_calls",
-            label: "Aktive Calls",
+            label: this._t("active_calls"),
             icon: "mdi:phone-in-talk-outline",
             count: calls.length,
           }]
@@ -700,7 +940,7 @@ class HaFlowStationCard extends HTMLElement {
       ...(this._tabVisible("registered_devices")
         ? [{
             id: "registered_devices",
-            label: "Registrierte Geräte",
+            label: this._t("registered_devices"),
             icon: "mdi:radio-handheld",
             count: devices.length,
           }]
@@ -708,7 +948,7 @@ class HaFlowStationCard extends HTMLElement {
       ...(this._tabVisible("last_heard")
         ? [{
             id: "last_heard",
-            label: "Zuletzt gehört",
+            label: this._t("last_heard"),
             icon: "mdi:history",
             count: lastHeard.length,
           }]
@@ -728,8 +968,8 @@ class HaFlowStationCard extends HTMLElement {
         <section class="panel no-tabs">
           <ha-icon icon="mdi:tab-remove"></ha-icon>
           <div>
-            <strong>Keine Bereiche aktiviert</strong>
-            <span>Aktiviere mindestens einen Tab in der Kartenkonfiguration.</span>
+            <strong>${this._t("no_sections")}</strong>
+            <span>${this._t("enable_section")}</span>
           </div>
         </section>
       `;
@@ -783,18 +1023,18 @@ class HaFlowStationCard extends HTMLElement {
             <ha-icon icon="mdi:radio-tower"></ha-icon>
           </div>
           <div>
-            <h2>Basisstation</h2>
-            <span>Funk- und Netzwerkparameter</span>
+            <h2>${this._t("base_station")}</h2>
+            <span>${this._t("radio_network_parameters")}</span>
           </div>
         </div>
         <div class="metrics">
-          ${this._metric("Downlink (TX)", this._frequency(attributes.tx_freq_hz), "mdi:arrow-down-bold")}
-          ${this._metric("Uplink (RX)", this._frequency(attributes.rx_freq_hz), "mdi:arrow-up-bold")}
-          ${this._metric("Duplexabstand", this._frequency(attributes.shift_hz), "mdi:swap-vertical-bold")}
+          ${this._metric(this._t("downlink"), this._frequency(attributes.tx_freq_hz), "mdi:arrow-down-bold")}
+          ${this._metric(this._t("uplink"), this._frequency(attributes.rx_freq_hz), "mdi:arrow-up-bold")}
+          ${this._metric(this._t("duplex_spacing"), this._frequency(attributes.shift_hz), "mdi:swap-vertical-bold")}
           ${this._metric("Carrier", this._value(attributes.main_carrier), "mdi:sine-wave")}
           ${this._metric("MCC / MNC", `${this._value(attributes.mcc)} / ${this._value(attributes.mnc)}`, "mdi:identifier")}
-          ${this._metric("Hangtime", this._number(attributes.hangtime_secs, 0, " s"), "mdi:timer-outline")}
-          ${this._metric("Nachbarzellen", this._value(attributes.neighbor_count, "0"), "mdi:access-point-network")}
+          ${this._metric(this._t("hangtime"), this._number(attributes.hangtime_secs, 0, " s"), "mdi:timer-outline")}
+          ${this._metric(this._t("neighbor_cells"), this._value(attributes.neighbor_count, "0"), "mdi:access-point-network")}
         </div>
       </div>
     `;
@@ -830,8 +1070,8 @@ class HaFlowStationCard extends HTMLElement {
         ${calls.length ? `
           <section class="dashboard-section">
             <div class="dashboard-section-heading">
-              <h3>Aktive Calls</h3>
-              <span class="live-badge"><span></span>${calls.length} aktiv</span>
+              <h3>${this._t("active_calls")}</h3>
+              <span class="live-badge"><span></span>${calls.length} ${this._t("active").toLowerCase()}</span>
             </div>
             ${this._activeCalls(calls, true)}
           </section>
@@ -839,7 +1079,7 @@ class HaFlowStationCard extends HTMLElement {
 
         <section class="dashboard-section">
           <div class="dashboard-section-heading">
-            <h3>Registrierte Geräte</h3>
+            <h3>${this._t("registered_devices")}</h3>
             <span class="count-badge">${devices.length}</span>
           </div>
           ${this._registeredDevices(devices, true)}
@@ -855,17 +1095,17 @@ class HaFlowStationCard extends HTMLElement {
       ? "MCCH"
       : active
       ? (slot.source_callsign || slot.source || this._callType(slot.type))
-      : "Frei";
+      : this._t("free");
     const detail = mcch
-      ? (flowstationOnline ? "Aktiv" : "Offline")
+      ? (flowstationOnline ? this._t("active") : this._t("offline"))
       : active
-      ? `Ziel ${this._value(slot.destination)}`
-      : "Idle";
+      ? `${this._t("target")} ${this._value(slot.destination)}`
+      : this._t("idle");
     const state = mcch
       ? (flowstationOnline ? "CONTROL" : "OFFLINE")
       : active
         ? "ACTIVE"
-        : "IDLE";
+        : this._t("idle").toUpperCase();
 
     return `
       <article class="slot-card ${mcch ? "mcch" : active ? "active" : "idle"}">
@@ -884,7 +1124,7 @@ class HaFlowStationCard extends HTMLElement {
         ${active && !mcch ? `
           <div class="slot-meta">
             <span>${this._callType(slot.type)}</span>
-            <span>Sprecher ${this._value(slot.speaker_callsign || slot.speaker)}</span>
+            <span>${this._t("speaker")} ${this._value(slot.speaker_callsign || slot.speaker)}</span>
           </div>
         ` : ""}
       </article>
@@ -903,15 +1143,15 @@ class HaFlowStationCard extends HTMLElement {
             <td data-label="Status">
               <span class="state-pill ${mcch ? "mcch" : active ? "active" : "idle"}">
                 <span class="mini-dot"></span>
-                ${mcch ? "MCCH" : active ? "Aktiv" : "Frei"}
+                ${mcch ? "MCCH" : active ? this._t("active") : this._t("free")}
               </span>
             </td>
-            <td data-label="Typ">${mcch ? "Kontrollkanal" : this._callType(slot.type)}</td>
-            <td data-label="Quelle">${this._value(slot.source)}</td>
-            <td data-label="Rufzeichen">${this._value(slot.source_callsign)}</td>
-            <td data-label="Ziel">${this._value(slot.destination)}</td>
-            <td data-label="Sprecher">${this._value(slot.speaker_callsign || slot.speaker)}</td>
-            <td data-label="Priorität">${this._value(slot.priority)}</td>
+            <td data-label="${this._t("type")}">${mcch ? this._t("control_channel") : this._callType(slot.type)}</td>
+            <td data-label="${this._t("source")}">${this._value(slot.source)}</td>
+            <td data-label="${this._t("callsign")}">${this._value(slot.source_callsign)}</td>
+            <td data-label="${this._t("target")}">${this._value(slot.destination)}</td>
+            <td data-label="${this._t("speaker")}">${this._value(slot.speaker_callsign || slot.speaker)}</td>
+            <td data-label="${this._t("priority")}">${this._value(slot.priority)}</td>
             <td data-label="Simplex">${this._bool(slot.simplex)}</td>
           </tr>
         `;
@@ -923,9 +1163,9 @@ class HaFlowStationCard extends HTMLElement {
           <table>
             <thead>
               <tr>
-                <th>Slot</th><th>Status</th><th>Typ</th><th>Quelle (ISSI)</th>
-                <th>Rufzeichen</th><th>Ziel (ISSI / GSSI)</th><th>Sprecher</th>
-                <th>Priorität</th><th>Simplex</th>
+                <th>Slot</th><th>${this._t("status")}</th><th>${this._t("type")}</th><th>${this._t("source")} (ISSI)</th>
+                <th>${this._t("callsign")}</th><th>${this._t("target")} (ISSI / GSSI)</th><th>${this._t("speaker")}</th>
+                <th>${this._t("priority")}</th><th>Simplex</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -935,7 +1175,7 @@ class HaFlowStationCard extends HTMLElement {
 
     return embedded
       ? table
-      : `<section class="panel table-panel"><h2>Timeslots</h2>${table}</section>`;
+      : `<section class="panel table-panel"><h2>${this._t("timeslots")}</h2>${table}</section>`;
   }
 
   _activeCalls(calls, embedded = false) {
@@ -945,33 +1185,33 @@ class HaFlowStationCard extends HTMLElement {
             (call) => `
               <tr>
                 <td data-label="ID">${this._value(call.call_id)}</td>
-                <td data-label="Typ">${this._callType(call.type)}</td>
+                <td data-label="${this._t("type")}">${this._callType(call.type)}</td>
                 <td data-label="Slot">${this._value(call.slot)}</td>
-                <td data-label="Quelle">${this._value(call.source)}</td>
-                <td data-label="Rufzeichen">${this._value(call.source_callsign)}</td>
-                <td data-label="Ziel">${this._value(call.destination)}</td>
-                <td data-label="Sprecher">${this._value(call.speaker_callsign || call.speaker)}</td>
+                <td data-label="${this._t("source")}">${this._value(call.source)}</td>
+                <td data-label="${this._t("callsign")}">${this._value(call.source_callsign)}</td>
+                <td data-label="${this._t("target")}">${this._value(call.destination)}</td>
+                <td data-label="${this._t("speaker")}">${this._value(call.speaker_callsign || call.speaker)}</td>
                 <td
-                  data-label="Dauer"
+                  data-label="${this._t("duration")}"
                   data-call-duration
                   data-started="${Number(call.started_secs_ago || 0)}"
                 >${this._duration(call)}</td>
-                <td data-label="Priorität">${this._value(call.priority)}</td>
+                <td data-label="${this._t("priority")}">${this._value(call.priority)}</td>
                 <td data-label="Simplex">${this._bool(call.simplex)}</td>
                 <td data-label="Carrier">${this._value(call.carrier)}</td>
               </tr>
             `,
           )
           .join("")
-      : this._emptyRow(11, "Keine aktiven Gespräche");
+      : this._emptyRow(11, this._t("no_active_calls"));
 
     const table = `
       <div class="table-scroll">
           <table>
             <thead><tr>
-              <th>ID</th><th>Typ</th><th>Slot</th><th>Quelle (ISSI)</th>
-              <th>Rufzeichen</th><th>Ziel (ISSI / GSSI)</th><th>Sprecher</th>
-              <th>Dauer</th><th>Priorität</th><th>Simplex</th><th>Carrier</th>
+              <th>ID</th><th>${this._t("type")}</th><th>Slot</th><th>${this._t("source")} (ISSI)</th>
+              <th>${this._t("callsign")}</th><th>${this._t("target")} (ISSI / GSSI)</th><th>${this._t("speaker")}</th>
+              <th>${this._t("duration")}</th><th>${this._t("priority")}</th><th>Simplex</th><th>Carrier</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
@@ -980,7 +1220,7 @@ class HaFlowStationCard extends HTMLElement {
 
     return embedded
       ? table
-      : `<section class="panel table-panel"><h2>Aktive Calls</h2>${table}</section>`;
+      : `<section class="panel table-panel"><h2>${this._t("active_calls")}</h2>${table}</section>`;
   }
 
   _registeredDevices(devices, embedded = false) {
@@ -990,32 +1230,32 @@ class HaFlowStationCard extends HTMLElement {
             (device) => `
               <tr>
                 <td data-label="ISSI">${this._value(device.issi)}</td>
-                <td data-label="Rufzeichen">
+                <td data-label="${this._t("callsign")}">
                   <span class="callsign">
                     ${device.country_flag ? `<span class="country-flag">${this._escape(device.country_flag)}</span>` : ""}
                     <strong>${this._value(device.callsign)}</strong>
                   </span>
                 </td>
-                <td data-label="Gruppen">${this._groupChips(device)}</td>
-                <td data-label="Empfang">${this._rssiMeter(device.rssi_dbfs)}</td>
+                <td data-label="${this._t("groups")}">${this._groupChips(device)}</td>
+                <td data-label="${this._t("reception")}">${this._rssiMeter(device.rssi_dbfs)}</td>
                 <td
-                  data-label="Zuletzt gesehen"
+                  data-label="${this._t("last_seen")}"
                   data-last-seen-at="${this._value(device.last_seen_at, "")}"
                   data-last-seen-fallback="${this._value(device.last_seen_secs_ago, "0")}"
                 >${this._lastSeen(device)}</td>
-                <td data-label="Energiesparen">${this._energySaving(device.energy_saving_mode)}</td>
+                <td data-label="${this._t("energy_saving")}">${this._energySaving(device.energy_saving_mode)}</td>
               </tr>
             `,
           )
           .join("")
-      : this._emptyRow(6, "Keine Geräte registriert");
+      : this._emptyRow(6, this._t("no_registered_devices"));
 
     const table = `
       <div class="table-scroll">
           <table>
             <thead><tr>
-              <th>ISSI</th><th>Rufzeichen</th><th>Gruppen</th>
-              <th>Empfang</th><th>Zuletzt gesehen</th><th>Energiesparen</th>
+              <th>ISSI</th><th>${this._t("callsign")}</th><th>${this._t("groups")}</th>
+              <th>${this._t("reception")}</th><th>${this._t("last_seen")}</th><th>${this._t("energy_saving")}</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
@@ -1027,7 +1267,7 @@ class HaFlowStationCard extends HTMLElement {
       : `
         <section class="panel table-panel">
           <div class="section-heading">
-            <h2>Registrierte Geräte</h2>
+            <h2>${this._t("registered_devices")}</h2>
             <span class="count-badge">${devices.length}</span>
           </div>
           ${table}
@@ -1041,20 +1281,20 @@ class HaFlowStationCard extends HTMLElement {
           .map(
             (entry) => `
               <tr>
-                <td data-label="Zeit">${this._value(entry.time)}</td>
+                <td data-label="${this._t("time")}">${this._value(entry.time)}</td>
                 <td data-label="ISSI">${this._value(entry.issi)}</td>
-                <td data-label="Rufzeichen">
+                <td data-label="${this._t("callsign")}">
                   <span class="callsign">
                     ${entry.country_flag ? `<span class="country-flag">${this._escape(entry.country_flag)}</span>` : ""}
                     <strong>${this._value(entry.callsign)}</strong>
                   </span>
                 </td>
-                <td data-label="Aktivität">
+                <td data-label="${this._t("activity")}">
                   <span class="activity-pill ${this._escape(entry.activity || "")}">
                     ${this._escape(this._activity(entry.activity))}
                   </span>
                 </td>
-                <td data-label="Ziel">
+                <td data-label="${this._t("target")}">
                   <span class="target-chip ${entry.activity === "call_group" ? "group" : ""}">
                     ${this._value(entry.destination)}
                   </span>
@@ -1063,14 +1303,14 @@ class HaFlowStationCard extends HTMLElement {
             `,
           )
           .join("")
-      : this._emptyRow(5, "Noch keine Aktivität");
+      : this._emptyRow(5, this._t("no_activity"));
 
     const table = `
       <div class="table-scroll">
           <table>
             <thead><tr>
-              <th>Zeit</th><th>ISSI</th><th>Rufzeichen</th>
-              <th>Aktivität</th><th>Ziel</th>
+              <th>${this._t("time")}</th><th>ISSI</th><th>${this._t("callsign")}</th>
+              <th>${this._t("activity")}</th><th>${this._t("target")}</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
@@ -1079,7 +1319,7 @@ class HaFlowStationCard extends HTMLElement {
 
     return embedded
       ? table
-      : `<section class="panel table-panel"><h2>Zuletzt gehört</h2>${table}</section>`;
+      : `<section class="panel table-panel"><h2>${this._t("last_heard")}</h2>${table}</section>`;
   }
 
   _sdsDirection(direction) {
@@ -1095,12 +1335,12 @@ class HaFlowStationCard extends HTMLElement {
     const labels = {
       2: "Text",
       9: "Text",
-      10: "LIP-Position",
-      12: "Mehrteilig",
+      10: this._t("lip_position"),
+      12: this._t("multiple_parts"),
       128: "Text",
       130: "Text",
       137: "Text",
-      218: "Status",
+      218: this._t("status"),
       220: "Home Display",
     };
     return labels[Number(protocolId)] || `PID ${protocolId ?? "?"}`;
@@ -1162,9 +1402,9 @@ class HaFlowStationCard extends HTMLElement {
 
     if (Number(entry.protocol_id) === 10) {
       return `
-        <span class="lip-undecoded" title="FlowStation übermittelt für diese binäre LIP-Nachricht keine Koordinaten.">
+        <span class="lip-undecoded" title="${this._escape(this._t("position_unavailable_hint"))}">
           <ha-icon icon="mdi:map-marker-question-outline"></ha-icon>
-          Position nicht von FlowStation bereitgestellt
+          ${this._t("position_unavailable")}
         </span>
       `;
     }
@@ -1178,36 +1418,36 @@ class HaFlowStationCard extends HTMLElement {
           .map(
             (entry) => `
               <tr>
-                <td data-label="Zeit" class="sds-time">${this._dateTime(entry.time)}</td>
-                <td data-label="Richtung">
+                <td data-label="${this._t("time")}" class="sds-time">${this._dateTime(entry.time)}</td>
+                <td data-label="${this._t("direction")}">
                   <span class="direction-pill ${this._escape(entry.direction || "")}">
                     ${this._escape(this._sdsDirection(entry.direction))}
                   </span>
                 </td>
-                <td data-label="Von">${this._sdsIdentity(entry, "source")}</td>
-                <td data-label="Art">
+                <td data-label="${this._t("from")}">${this._sdsIdentity(entry, "source")}</td>
+                <td data-label="${this._t("kind")}">
                   <span class="protocol-chip ${Number(entry.protocol_id) === 10 ? "lip" : ""}">
                     ${this._escape(this._sdsProtocol(entry.protocol_id))}
                   </span>
                 </td>
-                <td data-label="An">
+                <td data-label="${this._t("to")}">
                   ${entry.is_group
                     ? `<span class="target-chip group">${this._value(entry.dest_issi)}</span>`
                     : this._sdsIdentity(entry, "destination")}
                 </td>
-                <td data-label="Nachricht" class="sds-message">${this._sdsMessage(entry)}</td>
+                <td data-label="${this._t("message")}" class="sds-message">${this._sdsMessage(entry)}</td>
               </tr>
             `,
           )
           .join("")
-      : this._emptyRow(6, "Noch keine SDS-Nachrichten");
+      : this._emptyRow(6, this._t("no_sds"));
 
     const table = `
       <div class="table-scroll">
         <table class="sds-table">
           <thead><tr>
-            <th>Zeit</th><th>Richtung</th><th>Von</th>
-            <th>Art</th><th>An</th><th>Nachricht / Position</th>
+            <th>${this._t("time")}</th><th>${this._t("direction")}</th><th>${this._t("from")}</th>
+            <th>${this._t("kind")}</th><th>${this._t("to")}</th><th>${this._t("message_position")}</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>

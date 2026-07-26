@@ -6,6 +6,10 @@ Die Karte besitzt einen integrierten visuellen Konfigurationseditor auf Basis
 von Home Assistants `getConfigForm`-API. Sie kann daher direkt über die
 Dashboard-Oberfläche konfiguriert werden; YAML bleibt weiterhin möglich.
 
+Die Oberfläche ist auf Deutsch und Englisch verfügbar. `language: auto`
+übernimmt automatisch die Sprache des Home-Assistant-Benutzerprofils; Deutsch
+oder Englisch können in der Kartenkonfiguration fest vorgegeben werden.
+
 Die Karte zeigt:
 
 - Status von MQTT-Bridge, FlowStation und Brew
@@ -54,6 +58,7 @@ Eine abweichende Entity-ID kann in der Kartenkonfiguration angegeben werden.
 type: custom:ha-flowstation-card
 entity: sensor.flowstation_flowstation
 title: FlowStation
+language: auto
 max_last_heard: 10
 max_sds_entries: 20
 default_tab: dashboard
@@ -67,6 +72,7 @@ localized_timestamps: true
 |---|---|---|
 | `entity` | `sensor.flowstation_flowstation` | FlowStation-Sensor |
 | `title` | `FlowStation` | Überschrift |
+| `language` | `auto` | Sprache: `auto`, `de` oder `en` |
 | `max_last_heard` | `10` | Anzahl der angezeigten Einträge |
 | `max_sds_entries` | `20` | Anzahl der angezeigten SDS-Einträge |
 | `default_tab` | `dashboard` | Beim ersten Laden geöffneter Tab |
@@ -86,6 +92,7 @@ localized_timestamps: true
 type: custom:ha-flowstation-card
 entity: sensor.flowstation_flowstation
 title: FlowStation
+language: auto
 max_last_heard: 15
 max_sds_entries: 25
 default_tab: sds
