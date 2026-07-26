@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.8.0";
+const CARD_VERSION = "0.9.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -231,6 +231,7 @@ class HaFlowStationCard extends HTMLElement {
     if (!this._timer) {
       this._timer = window.setInterval(() => {
         this._updateDurations();
+        this._updateLastSeen();
       }, 1000);
     }
   }
@@ -314,6 +315,93 @@ class HaFlowStationCard extends HTMLElement {
           `${String(minutes).padStart(2, "0")}:` +
           String(seconds).padStart(2, "0");
       });
+  }
+
+  _lastSeenLabel(seconds) {
+    const value = Math.max(0, Number(seconds) || 0);
+    if (value < 5) return "Jetzt";
+    if (value < 60) return `vor ${Math.floor(value)} s`;
+    if (value < 3600) return `vor ${Math.floor(value / 60)} min`;
+    if (value < 86400) {
+      const hours = Math.floor(value / 3600);
+      const minutes = Math.floor((value % 3600) / 60);
+      return `vor ${hours} h ${minutes} min`;
+    }
+    return `vor ${Math.floor(value / 86400)} d`;
+  }
+
+  _lastSeen(device) {
+    const hasTimestamp =
+      device.last_seen_at !== null &&
+      device.last_seen_at !== undefined &&
+      device.last_seen_at !== "";
+    const timestamp = Number(device.last_seen_at);
+    const seconds = hasTimestamp && Number.isFinite(timestamp)
+      ? Math.floor(Date.now() / 1000) - timestamp
+      : Number(device.last_seen_secs_ago || 0);
+    return this._lastSeenLabel(seconds);
+  }
+
+  _updateLastSeen() {
+    const now = Math.floor(Date.now() / 1000);
+    this.shadowRoot
+      ?.querySelectorAll("[data-last-seen-at]")
+      .forEach((element) => {
+        const rawTimestamp = element.dataset.lastSeenAt;
+        const timestamp = Number(rawTimestamp);
+        const fallback = Number(element.dataset.lastSeenFallback || 0);
+        const seconds = rawTimestamp !== "" && Number.isFinite(timestamp)
+          ? now - timestamp
+          : fallback;
+        element.textContent = this._lastSeenLabel(seconds);
+      });
+  }
+
+  _rssiMeter(value) {
+    const rssi = Number(value);
+    if (!Number.isFinite(rssi)) {
+      return `<span class="muted">–</span>`;
+    }
+
+    const ratio = Math.max(0, Math.min(1, (rssi + 60) / 50));
+    const activeBars = Math.max(1, Math.round(ratio * 5));
+    const quality =
+      rssi > -20 ? "strong" :
+      rssi > -30 ? "good" :
+      rssi > -40 ? "medium" : "weak";
+    const bars = [1, 2, 3, 4, 5]
+      .map(
+        (bar) =>
+          `<i class="${bar <= activeBars ? "filled" : ""}"></i>`,
+      )
+      .join("");
+
+    return `
+      <div class="rssi-meter ${quality}" title="${this._number(rssi, 1, " dBFS")}">
+        <span class="rssi-bars">${bars}</span>
+        <span>${this._number(rssi, 1, " dBFS")}</span>
+      </div>
+    `;
+  }
+
+  _groupChips(device) {
+    const groups = Array.isArray(device.groups) ? device.groups : [];
+    if (!groups.length) return `<span class="muted">–</span>`;
+
+    return `
+      <div class="group-chips">
+        ${groups
+          .map(
+            (group) => `
+              <span class="group-chip ${group === device.selected_group ? "selected" : ""}">
+                ${group === device.selected_group ? '<ha-icon icon="mdi:play"></ha-icon>' : ""}
+                ${this._escape(group)}
+              </span>
+            `,
+          )
+          .join("")}
+      </div>
+    `;
   }
 
   _activity(value) {
@@ -789,30 +877,32 @@ class HaFlowStationCard extends HTMLElement {
   _registeredDevices(devices, embedded = false) {
     const rows = devices.length
       ? devices
-          .map((device) => {
-            const groups = Array.isArray(device.groups)
-              ? device.groups.join(", ")
-              : "–";
-            return `
+          .map(
+            (device) => `
               <tr>
                 <td data-label="ISSI">${this._value(device.issi)}</td>
+                <td data-label="Land"><span class="country-flag">${this._value(device.country_flag)}</span></td>
                 <td data-label="Rufzeichen"><strong>${this._value(device.callsign)}</strong></td>
-                <td data-label="Gruppen">${this._value(groups)}</td>
-                <td data-label="Aktive Gruppe">${this._value(device.selected_group)}</td>
-                <td data-label="RSSI">${device.rssi_dbfs == null ? "–" : this._number(device.rssi_dbfs, 1, " dBFS")}</td>
+                <td data-label="Gruppen">${this._groupChips(device)}</td>
+                <td data-label="Empfang">${this._rssiMeter(device.rssi_dbfs)}</td>
+                <td
+                  data-label="Zuletzt gesehen"
+                  data-last-seen-at="${this._value(device.last_seen_at, "")}"
+                  data-last-seen-fallback="${this._value(device.last_seen_secs_ago, "0")}"
+                >${this._lastSeen(device)}</td>
                 <td data-label="Energiesparen">Modus ${this._value(device.energy_saving_mode, "0")}</td>
               </tr>
-            `;
-          })
+            `,
+          )
           .join("")
-      : this._emptyRow(6, "Keine Geräte registriert");
+      : this._emptyRow(7, "Keine Geräte registriert");
 
     const table = `
       <div class="table-scroll">
           <table>
             <thead><tr>
-              <th>ISSI</th><th>Rufzeichen</th><th>Gruppen</th>
-              <th>Aktive Gruppe</th><th>RSSI</th><th>Energiesparen</th>
+              <th>ISSI</th><th>Land</th><th>Rufzeichen</th><th>Gruppen</th>
+              <th>Empfang</th><th>Zuletzt gesehen</th><th>Energiesparen</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
@@ -1484,6 +1574,89 @@ class HaFlowStationCard extends HTMLElement {
         .activity-pill.call_group { color: #55b8ff; background: rgba(85,184,255,.12); }
         .activity-pill.call_individual { color: #ffb74d; background: rgba(255,183,77,.12); }
         .activity-pill.sds { color: #b388ff; background: rgba(179,136,255,.12); }
+
+        .country-flag {
+          font-family:
+            "Apple Color Emoji",
+            "Segoe UI Emoji",
+            "Noto Color Emoji",
+            sans-serif;
+          font-size: 1.45rem;
+          line-height: 1;
+        }
+
+        .group-chips {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 5px;
+          min-width: 120px;
+        }
+
+        .group-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          padding: 3px 7px;
+          border: 1px solid var(--fs-border);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          background: rgba(255,255,255,.035);
+          font-family: var(--code-font-family, monospace);
+          font-size: .72rem;
+        }
+
+        .group-chip.selected {
+          border-color: rgba(57,209,38,.24);
+          color: var(--fs-green);
+          background: var(--fs-green-soft);
+          font-weight: 700;
+        }
+
+        .group-chip ha-icon { --mdc-icon-size: 10px; }
+
+        .rssi-meter {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          font-family: var(--code-font-family, monospace);
+          font-size: .72rem;
+        }
+
+        .rssi-bars {
+          display: inline-flex;
+          align-items: end;
+          gap: 2px;
+          height: 19px;
+        }
+
+        .rssi-bars i {
+          display: block;
+          width: 4px;
+          border-radius: 2px 2px 0 0;
+          background: rgba(130,155,185,.15);
+        }
+
+        .rssi-bars i:nth-child(1) { height: 5px; }
+        .rssi-bars i:nth-child(2) { height: 8px; }
+        .rssi-bars i:nth-child(3) { height: 11px; }
+        .rssi-bars i:nth-child(4) { height: 15px; }
+        .rssi-bars i:nth-child(5) { height: 19px; }
+
+        .rssi-meter.strong .rssi-bars i.filled,
+        .rssi-meter.good .rssi-bars i.filled {
+          background: var(--fs-green);
+          box-shadow: 0 0 5px rgba(57,209,38,.3);
+        }
+
+        .rssi-meter.medium .rssi-bars i.filled {
+          background: #ffb74d;
+        }
+
+        .rssi-meter.weak .rssi-bars i.filled {
+          background: var(--fs-red);
+        }
 
         .section-heading {
           display: flex;

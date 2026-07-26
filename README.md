@@ -13,7 +13,8 @@ Die Karte zeigt:
 - Frequenzen und Basisstationsdaten
 - vier Timeslots
 - aktive Calls
-- registrierte Funkgeräte
+- registrierte Funkgeräte mit Landesflagge, Empfangsanzeige, Gruppen-Chips
+  und laufend aktualisierter „Zuletzt gesehen“-Zeit
 - „Zuletzt gehört“-Historie
 
 ## Voraussetzung
