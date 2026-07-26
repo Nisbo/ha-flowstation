@@ -49,6 +49,7 @@ entity: sensor.flowstation_flowstation
 title: FlowStation
 max_last_heard: 10
 default_tab: dashboard
+compact_timeslots: false
    ```
 
 ## Optionen
@@ -59,6 +60,7 @@ default_tab: dashboard
 | `title` | `FlowStation` | Überschrift |
 | `max_last_heard` | `10` | Anzahl der angezeigten Einträge |
 | `default_tab` | `dashboard` | Beim ersten Laden geöffneter Tab |
+| `compact_timeslots` | `false` | Kompakte Dashboard-Timeslots mit etwa halber Höhe |
 | `show_active_calls` | `true` | Tabelle der aktiven Calls |
 | `show_registered_devices` | `true` | Registrierte Geräte anzeigen |
 | `show_last_heard` | `true` | „Zuletzt gehört“ anzeigen |
@@ -71,6 +73,7 @@ entity: sensor.flowstation_flowstation
 title: FlowStation
 max_last_heard: 15
 default_tab: last_heard
+compact_timeslots: true
 show_active_calls: true
 show_registered_devices: true
 show_last_heard: true

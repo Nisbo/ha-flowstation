@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.4.0";
+const CARD_VERSION = "0.5.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -26,6 +26,7 @@ class HaFlowStationCard extends HTMLElement {
       title: "FlowStation",
       max_last_heard: 10,
       default_tab: "dashboard",
+      compact_timeslots: false,
     };
   }
 
@@ -421,12 +422,18 @@ class HaFlowStationCard extends HTMLElement {
 
   _dashboard(attributes, slots, calls, devices) {
     const slotCards = ["1", "2", "3", "4"]
-      .map((number) => this._slotCard(number, slots[number] || {}))
+      .map((number) =>
+        this._slotCard(
+          number,
+          slots[number] || {},
+          Boolean(attributes.flowstation_online),
+        ),
+      )
       .join("");
 
     return `
       <div class="dashboard-tab">
-        <section class="rf-channel">
+        <section class="rf-channel ${this._config.compact_timeslots ? "compact" : ""}">
           <div class="rf-heading">
             <div>
               <span class="eyebrow">RF Channel</span>
@@ -461,20 +468,30 @@ class HaFlowStationCard extends HTMLElement {
     `;
   }
 
-  _slotCard(number, slot) {
+  _slotCard(number, slot, flowstationOnline) {
+    const mcch = number === "1";
     const active = Boolean(slot.active);
-    const label = active
+    const label = mcch
+      ? "MCCH"
+      : active
       ? (slot.source_callsign || slot.source || this._callType(slot.type))
       : "Frei";
-    const detail = active
+    const detail = mcch
+      ? (flowstationOnline ? "Aktiv" : "Offline")
+      : active
       ? `Ziel ${this._value(slot.destination)}`
       : "Idle";
+    const state = mcch
+      ? (flowstationOnline ? "CONTROL" : "OFFLINE")
+      : active
+        ? "ACTIVE"
+        : "IDLE";
 
     return `
-      <article class="slot-card ${active ? "active" : "idle"}">
+      <article class="slot-card ${mcch ? "mcch" : active ? "active" : "idle"}">
         <div class="slot-card-top">
           <strong>TS ${number}</strong>
-          <span class="slot-state">${active ? "ACTIVE" : "IDLE"}</span>
+          <span class="slot-state">${state}</span>
         </div>
         <div class="slot-visual">
           <span class="radio-pulse"></span>
@@ -484,7 +501,7 @@ class HaFlowStationCard extends HTMLElement {
         </div>
         <div class="slot-main">${this._escape(label)}</div>
         <div class="slot-detail">${detail}</div>
-        ${active ? `
+        ${active && !mcch ? `
           <div class="slot-meta">
             <span>${this._callType(slot.type)}</span>
             <span>Sprecher ${this._value(slot.speaker_callsign || slot.speaker)}</span>
@@ -498,17 +515,18 @@ class HaFlowStationCard extends HTMLElement {
     const rows = ["1", "2", "3", "4"]
       .map((number) => {
         const slot = slots[number] || {};
+        const mcch = number === "1";
         const active = Boolean(slot.active);
         return `
-          <tr class="${active ? "active-row" : ""}">
+          <tr class="${mcch ? "mcch-row" : active ? "active-row" : ""}">
             <td data-label="Slot"><strong>${number}</strong></td>
             <td data-label="Status">
-              <span class="state-pill ${active ? "active" : "idle"}">
+              <span class="state-pill ${mcch ? "mcch" : active ? "active" : "idle"}">
                 <span class="mini-dot"></span>
-                ${active ? "Aktiv" : "Frei"}
+                ${mcch ? "MCCH" : active ? "Aktiv" : "Frei"}
               </span>
             </td>
-            <td data-label="Typ">${this._callType(slot.type)}</td>
+            <td data-label="Typ">${mcch ? "Kontrollkanal" : this._callType(slot.type)}</td>
             <td data-label="Quelle">${this._value(slot.source)}</td>
             <td data-label="Rufzeichen">${this._value(slot.source_callsign)}</td>
             <td data-label="Ziel">${this._value(slot.destination)}</td>
@@ -1016,6 +1034,16 @@ class HaFlowStationCard extends HTMLElement {
             0 0 16px rgba(57,209,38,.07);
         }
 
+        .slot-card.mcch {
+          border-color: rgba(66,165,245,.58);
+          background:
+            radial-gradient(circle at 50% 40%, rgba(66,165,245,.18), transparent 55%),
+            linear-gradient(150deg, rgba(66,165,245,.12), rgba(15,35,65,.08));
+          box-shadow:
+            inset 0 0 35px rgba(66,165,245,.055),
+            0 0 16px rgba(66,165,245,.07);
+        }
+
         .slot-card-top {
           display: flex;
           justify-content: space-between;
@@ -1030,6 +1058,11 @@ class HaFlowStationCard extends HTMLElement {
         .slot-card.active .slot-card-top strong,
         .slot-card.active .slot-state {
           color: var(--fs-green);
+        }
+
+        .slot-card.mcch .slot-card-top strong,
+        .slot-card.mcch .slot-state {
+          color: #42a5f5;
         }
 
         .slot-state { font-size: .65rem; }
@@ -1057,6 +1090,15 @@ class HaFlowStationCard extends HTMLElement {
           animation: radioPulse 1.6s ease-in-out infinite;
         }
 
+        .slot-card.mcch .radio-pulse {
+          background: #42a5f5;
+          box-shadow:
+            0 0 0 7px rgba(66,165,245,.14),
+            0 0 0 13px rgba(66,165,245,.06),
+            0 0 18px rgba(66,165,245,.65);
+          animation: radioPulse 2.2s ease-in-out infinite;
+        }
+
         .signal-bars {
           display: flex;
           align-items: end;
@@ -1075,6 +1117,11 @@ class HaFlowStationCard extends HTMLElement {
         .slot-card.active .signal-bars i {
           background: var(--fs-green);
           animation: signalBar 1s ease-in-out infinite alternate;
+        }
+
+        .slot-card.mcch .signal-bars i {
+          background: #42a5f5;
+          animation: signalBar 1.5s ease-in-out infinite alternate;
         }
 
         .signal-bars i:nth-child(1),
@@ -1097,6 +1144,7 @@ class HaFlowStationCard extends HTMLElement {
         }
 
         .slot-card.active .slot-main { color: var(--fs-green); }
+        .slot-card.mcch .slot-main { color: #42a5f5; }
 
         .slot-detail {
           margin-top: 5px;
@@ -1117,6 +1165,36 @@ class HaFlowStationCard extends HTMLElement {
           background: rgba(0,0,0,.1);
           font-size: .67rem;
         }
+
+        .rf-channel.compact .slot-card {
+          min-height: 100px;
+          padding: 10px;
+        }
+
+        .rf-channel.compact .slot-visual {
+          gap: 6px;
+          margin: 5px 0 3px;
+        }
+
+        .rf-channel.compact .radio-pulse {
+          width: 11px;
+          height: 11px;
+          box-shadow: none;
+        }
+
+        .rf-channel.compact .signal-bars {
+          gap: 2px;
+          height: 14px;
+        }
+
+        .rf-channel.compact .signal-bars i {
+          width: 3px;
+          max-height: 14px;
+        }
+
+        .rf-channel.compact .slot-main { font-size: .86rem; }
+        .rf-channel.compact .slot-detail { font-size: .66rem; }
+        .rf-channel.compact .slot-meta { display: none; }
 
         .dashboard-section {
           padding-top: 2px;
@@ -1183,6 +1261,7 @@ class HaFlowStationCard extends HTMLElement {
 
         tbody tr:hover { background: rgba(255,255,255,.025); }
         .active-row { background: var(--fs-green-soft); }
+        .mcch-row { background: rgba(66,165,245,.08); }
 
         .state-pill, .activity-pill {
           display: inline-flex;
@@ -1198,6 +1277,11 @@ class HaFlowStationCard extends HTMLElement {
           background: var(--fs-green-soft);
         }
 
+        .state-pill.mcch {
+          color: #42a5f5;
+          background: rgba(66,165,245,.13);
+        }
+
         .mini-dot {
           width: 10px;
           height: 10px;
@@ -1207,6 +1291,11 @@ class HaFlowStationCard extends HTMLElement {
         .state-pill.active .mini-dot {
           background: var(--fs-green);
           box-shadow: 0 0 9px var(--fs-green);
+        }
+
+        .state-pill.mcch .mini-dot {
+          background: #42a5f5;
+          box-shadow: 0 0 9px #42a5f5;
         }
 
         .activity-pill.call_group { color: #55b8ff; background: rgba(85,184,255,.12); }
