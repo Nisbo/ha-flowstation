@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.2.0";
+const CARD_VERSION = "0.3.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -16,6 +16,8 @@ class HaFlowStationCard extends HTMLElement {
     this._entityReceivedAt = Date.now();
     this._timer = null;
     this._activeTab = null;
+    this._tabHover = false;
+    this._renderPending = false;
   }
 
   static getStubConfig() {
@@ -53,17 +55,20 @@ class HaFlowStationCard extends HTMLElement {
     if (nextEntity !== this._entity) {
       this._entity = nextEntity;
       this._entityReceivedAt = Date.now();
-    }
 
-    this._render();
+      if (this._tabHover) {
+        this._renderPending = true;
+        return;
+      }
+
+      this._render();
+    }
   }
 
   connectedCallback() {
     if (!this._timer) {
       this._timer = window.setInterval(() => {
-        if ((this._entity?.attributes?.calls || []).length) {
-          this._render();
-        }
+        this._updateDurations();
       }, 1000);
     }
   }
@@ -130,6 +135,23 @@ class HaFlowStationCard extends HTMLElement {
     const minutes = Math.floor(total / 60);
     const seconds = total % 60;
     return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  _updateDurations() {
+    this.shadowRoot
+      ?.querySelectorAll("[data-call-duration]")
+      .forEach((cell) => {
+        const initial = Number(cell.dataset.started || 0);
+        const elapsed = Math.floor(
+          (Date.now() - this._entityReceivedAt) / 1000,
+        );
+        const total = Math.max(0, initial + elapsed);
+        const minutes = Math.floor(total / 60);
+        const seconds = total % 60;
+        cell.textContent =
+          `${String(minutes).padStart(2, "0")}:` +
+          String(seconds).padStart(2, "0");
+      });
   }
 
   _activity(value) {
@@ -225,9 +247,9 @@ class HaFlowStationCard extends HTMLElement {
           <header class="hero">
             <div class="identity">
               <h1>${this._escape(this._config.title)}</h1>
-              <div class="primary-status ${flowstationOnline ? "online" : "offline"}">
-                <span class="status-dot"></span>
-                FlowStation ${flowstationOnline ? "online" : "offline"}
+              <div class="subtitle">
+                <ha-icon icon="mdi:radio-tower"></ha-icon>
+                TETRA-Basisstation
               </div>
             </div>
             <div class="status-grid">
@@ -251,13 +273,13 @@ class HaFlowStationCard extends HTMLElement {
             <article class="panel base-panel">
               <h2>Basisstation</h2>
               <div class="metrics">
-                ${this._metric("Downlink (TX)", this._frequency(attributes.tx_freq_hz))}
-                ${this._metric("Uplink (RX)", this._frequency(attributes.rx_freq_hz))}
-                ${this._metric("Duplexabstand", this._frequency(attributes.shift_hz))}
-                ${this._metric("Carrier", this._value(attributes.main_carrier))}
-                ${this._metric("MCC / MNC", `${this._value(attributes.mcc)} / ${this._value(attributes.mnc)}`)}
-                ${this._metric("Hangtime", this._number(attributes.hangtime_secs, 0, " s"))}
-                ${this._metric("Nachbarzellen", this._value(attributes.neighbor_count, "0"))}
+                ${this._metric("Downlink (TX)", this._frequency(attributes.tx_freq_hz), "mdi:arrow-down-bold")}
+                ${this._metric("Uplink (RX)", this._frequency(attributes.rx_freq_hz), "mdi:arrow-up-bold")}
+                ${this._metric("Duplexabstand", this._frequency(attributes.shift_hz), "mdi:swap-vertical-bold")}
+                ${this._metric("Carrier", this._value(attributes.main_carrier), "mdi:sine-wave")}
+                ${this._metric("MCC / MNC", `${this._value(attributes.mcc)} / ${this._value(attributes.mnc)}`, "mdi:identifier")}
+                ${this._metric("Hangtime", this._number(attributes.hangtime_secs, 0, " s"), "mdi:timer-outline")}
+                ${this._metric("Nachbarzellen", this._value(attributes.neighbor_count, "0"), "mdi:access-point-network")}
               </div>
             </article>
           </section>
@@ -276,16 +298,32 @@ class HaFlowStationCard extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((button) => {
       button.addEventListener("click", () => {
         this._activeTab = button.dataset.tab;
+        this._tabHover = false;
+        this._renderPending = false;
         this._render();
+      });
+      button.addEventListener("mouseenter", () => {
+        this._tabHover = true;
+      });
+      button.addEventListener("mouseleave", () => {
+        this._tabHover = false;
+
+        if (this._renderPending) {
+          this._renderPending = false;
+          this._render();
+        }
       });
     });
   }
 
-  _metric(label, value) {
+  _metric(label, value, icon) {
     return `
       <div class="metric">
-        <span>${label}</span>
-        <strong>${value}</strong>
+        <div class="metric-icon"><ha-icon icon="${icon}"></ha-icon></div>
+        <div class="metric-copy">
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </div>
       </div>
     `;
   }
@@ -296,7 +334,7 @@ class HaFlowStationCard extends HTMLElement {
         id: "timeslots",
         label: "Timeslots",
         icon: "mdi:view-grid-outline",
-        count: 4,
+        count: null,
       },
       ...(this._config.show_active_calls
         ? [{
@@ -340,7 +378,7 @@ class HaFlowStationCard extends HTMLElement {
           >
             <ha-icon icon="${tab.icon}"></ha-icon>
             <span>${tab.label}</span>
-            <span class="tab-count">${tab.count}</span>
+            ${tab.count === null ? "" : `<span class="tab-count">${tab.count}</span>`}
           </button>
         `,
       )
@@ -420,7 +458,11 @@ class HaFlowStationCard extends HTMLElement {
                 <td data-label="Rufzeichen">${this._value(call.source_callsign)}</td>
                 <td data-label="Ziel">${this._value(call.destination)}</td>
                 <td data-label="Sprecher">${this._value(call.speaker_callsign || call.speaker)}</td>
-                <td data-label="Dauer">${this._duration(call)}</td>
+                <td
+                  data-label="Dauer"
+                  data-call-duration
+                  data-started="${Number(call.started_secs_ago || 0)}"
+                >${this._duration(call)}</td>
                 <td data-label="Priorität">${this._value(call.priority)}</td>
                 <td data-label="Simplex">${this._bool(call.simplex)}</td>
                 <td data-label="Carrier">${this._value(call.carrier)}</td>
@@ -571,25 +613,21 @@ class HaFlowStationCard extends HTMLElement {
         h1 { font-size: clamp(2rem, 4vw, 3.25rem); line-height: 1; }
         h2 { font-size: 1.25rem; }
 
-        .primary-status {
+        .subtitle {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
           margin-top: 14px;
-          font-size: 1.25rem;
-          font-weight: 600;
+          color: var(--secondary-text-color);
+          font-size: 1rem;
+          font-weight: 500;
         }
 
-        .status-dot, .mini-dot {
+        .subtitle ha-icon { --mdc-icon-size: 20px; }
+
+        .mini-dot {
           display: inline-block;
           border-radius: 50%;
-        }
-
-        .status-dot {
-          width: 22px;
-          height: 22px;
-          box-shadow: 0 0 16px currentColor;
-          background: currentColor;
         }
 
         .online { color: var(--fs-green); }
@@ -688,23 +726,59 @@ class HaFlowStationCard extends HTMLElement {
 
         .metrics {
           display: grid;
-          grid-template-columns: repeat(7, minmax(110px, 1fr));
+          grid-template-columns: repeat(4, minmax(145px, 1fr));
+          gap: 10px;
           margin-top: 20px;
-          border: 1px solid var(--fs-border);
-          overflow: hidden;
         }
 
         .metric {
-          display: grid;
-          gap: 14px;
-          padding: 16px 12px;
-          text-align: center;
-          border-right: 1px solid var(--fs-border);
+          display: flex;
+          align-items: center;
+          gap: 11px;
+          min-width: 0;
+          padding: 14px;
+          border: 1px solid var(--fs-border);
+          border-radius: 11px;
+          background:
+            linear-gradient(135deg, rgba(57,209,38,.065), transparent 65%),
+            rgba(0,0,0,.075);
+          text-align: left;
         }
 
-        .metric:last-child { border-right: 0; }
-        .metric span { font-weight: 700; font-size: .88rem; }
-        .metric strong { font-weight: 400; white-space: nowrap; }
+        .metric-icon {
+          display: grid;
+          place-items: center;
+          width: 38px;
+          height: 38px;
+          flex: 0 0 38px;
+          border-radius: 10px;
+          color: var(--fs-green);
+          background: var(--fs-green-soft);
+        }
+
+        .metric-icon ha-icon { --mdc-icon-size: 21px; }
+
+        .metric-copy {
+          display: grid;
+          gap: 5px;
+          min-width: 0;
+        }
+
+        .metric span {
+          color: var(--secondary-text-color);
+          font-size: .75rem;
+          font-weight: 700;
+          letter-spacing: .02em;
+          text-transform: uppercase;
+        }
+
+        .metric strong {
+          overflow: hidden;
+          font-size: .95rem;
+          font-weight: 600;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
 
         .table-panel { padding: 16px; }
         .table-panel h2 { margin: 0 4px 16px; }
@@ -878,8 +952,7 @@ class HaFlowStationCard extends HTMLElement {
         @media (max-width: 1100px) {
           .hero { align-items: flex-start; }
           .status-grid { grid-template-columns: 1fr; width: min(270px, 42%); }
-          .metrics { grid-template-columns: repeat(4, 1fr); }
-          .metric { border-bottom: 1px solid var(--fs-border); }
+          .metrics { grid-template-columns: repeat(3, 1fr); }
         }
 
         @media (max-width: 760px) {
@@ -902,7 +975,6 @@ class HaFlowStationCard extends HTMLElement {
           .overview-grid { grid-template-columns: 1fr; }
           .call-counter { min-height: 210px; }
           .metrics { grid-template-columns: repeat(2, 1fr); }
-          .metric:nth-child(even) { border-right: 0; }
           .base-panel { padding: 14px; }
           .tab-button {
             flex: 1 0 auto;
@@ -911,10 +983,8 @@ class HaFlowStationCard extends HTMLElement {
         }
 
         @media (max-width: 520px) {
-          .primary-status { font-size: 1rem; }
-          .status-dot { width: 16px; height: 16px; }
+          .subtitle { font-size: .9rem; }
           .metrics { grid-template-columns: 1fr; }
-          .metric { border-right: 0; }
 
           table, thead, tbody, tr, th, td { display: block; }
           thead { display: none; }
