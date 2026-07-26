@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.10.0";
+const CARD_VERSION = "0.11.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -957,14 +957,24 @@ class HaFlowStationCard extends HTMLElement {
             (entry) => `
               <tr>
                 <td data-label="Zeit">${this._value(entry.time)}</td>
+                <td data-label="ISSI">${this._value(entry.issi)}</td>
+                <td data-label="Rufzeichen">
+                  <span class="callsign">
+                    ${entry.country_flag ? `<span class="country-flag">${this._escape(entry.country_flag)}</span>` : ""}
+                    <strong>${this._value(entry.callsign)}</strong>
+                  </span>
+                </td>
                 <td data-label="Aktivität">
                   <span class="activity-pill ${this._escape(entry.activity || "")}">
                     ${this._escape(this._activity(entry.activity))}
                   </span>
                 </td>
-                <td data-label="ISSI">${this._value(entry.issi)}</td>
-                <td data-label="Rufzeichen"><strong>${this._value(entry.callsign)}</strong></td>
-                <td data-label="Ziel">${this._value(entry.destination)}</td>
+                <td data-label="Ziel">
+                  <span class="target-chip ${entry.activity === "call_group" ? "group" : ""}">
+                    ${entry.activity === "call_group" ? "GSSI " : ""}
+                    ${this._value(entry.destination)}
+                  </span>
+                </td>
               </tr>
             `,
           )
@@ -975,8 +985,8 @@ class HaFlowStationCard extends HTMLElement {
       <div class="table-scroll">
           <table>
             <thead><tr>
-              <th>Zeit</th><th>Aktivität</th><th>ISSI</th>
-              <th>Rufzeichen</th><th>Ziel</th>
+              <th>Zeit</th><th>ISSI</th><th>Rufzeichen</th>
+              <th>Aktivität</th><th>Ziel</th>
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
@@ -1602,6 +1612,25 @@ class HaFlowStationCard extends HTMLElement {
         .activity-pill.call_group { color: #55b8ff; background: rgba(85,184,255,.12); }
         .activity-pill.call_individual { color: #ffb74d; background: rgba(255,183,77,.12); }
         .activity-pill.sds { color: #b388ff; background: rgba(179,136,255,.12); }
+
+        .target-chip {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 9px;
+          border: 1px solid var(--fs-border);
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          background: rgba(255,255,255,.04);
+          font-family: var(--code-font-family, monospace);
+          font-size: .74rem;
+          font-weight: 700;
+        }
+
+        .target-chip.group {
+          border-color: rgba(66,165,245,.22);
+          color: #64b5f6;
+          background: rgba(66,165,245,.1);
+        }
 
         .country-flag {
           font-family:
