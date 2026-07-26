@@ -44,10 +44,11 @@ Eine abweichende Entity-ID kann in der Kartenkonfiguration angegeben werden.
 4. Eine manuelle Karte anlegen:
 
    ```yaml
-   type: custom:ha-flowstation-card
-   entity: sensor.flowstation_flowstation
-   title: FlowStation
-   max_last_heard: 10
+type: custom:ha-flowstation-card
+entity: sensor.flowstation_flowstation
+title: FlowStation
+max_last_heard: 10
+default_tab: timeslots
    ```
 
 ## Optionen
@@ -57,6 +58,7 @@ Eine abweichende Entity-ID kann in der Kartenkonfiguration angegeben werden.
 | `entity` | `sensor.flowstation_flowstation` | FlowStation-Sensor |
 | `title` | `FlowStation` | Überschrift |
 | `max_last_heard` | `10` | Anzahl der angezeigten Einträge |
+| `default_tab` | `timeslots` | Beim ersten Laden geöffneter Tab |
 | `show_active_calls` | `true` | Tabelle der aktiven Calls |
 | `show_registered_devices` | `true` | Registrierte Geräte anzeigen |
 | `show_last_heard` | `true` | „Zuletzt gehört“ anzeigen |
@@ -68,9 +70,19 @@ type: custom:ha-flowstation-card
 entity: sensor.flowstation_flowstation
 title: FlowStation
 max_last_heard: 15
+default_tab: last_heard
 show_active_calls: true
 show_registered_devices: true
 show_last_heard: true
+```
+
+Für `default_tab` sind folgende Werte möglich:
+
+```text
+timeslots
+active_calls
+registered_devices
+last_heard
 ```
 
 ## Lizenz

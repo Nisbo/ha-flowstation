@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.2.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -15,6 +15,7 @@ class HaFlowStationCard extends HTMLElement {
     this._entity = null;
     this._entityReceivedAt = Date.now();
     this._timer = null;
+    this._activeTab = null;
   }
 
   static getStubConfig() {
@@ -22,6 +23,7 @@ class HaFlowStationCard extends HTMLElement {
       entity: "sensor.flowstation_flowstation",
       title: "FlowStation",
       max_last_heard: 10,
+      default_tab: "timeslots",
     };
   }
 
@@ -39,6 +41,7 @@ class HaFlowStationCard extends HTMLElement {
       show_last_heard: true,
       ...config,
     };
+    this._activeTab = this._config.default_tab;
 
     this._render();
   }
@@ -259,13 +262,23 @@ class HaFlowStationCard extends HTMLElement {
             </article>
           </section>
 
-          ${this._timeslots(slots)}
-          ${this._config.show_active_calls ? this._activeCalls(calls) : ""}
-          ${this._config.show_registered_devices ? this._registeredDevices(devices) : ""}
-          ${this._config.show_last_heard ? this._lastHeard(lastHeard.slice(0, maxLastHeard)) : ""}
+          ${this._tabbedContent(
+            slots,
+            calls,
+            devices,
+            lastHeard,
+            maxLastHeard,
+          )}
         </div>
       </ha-card>
     `;
+
+    this.shadowRoot.querySelectorAll("[data-tab]").forEach((button) => {
+      button.addEventListener("click", () => {
+        this._activeTab = button.dataset.tab;
+        this._render();
+      });
+    });
   }
 
   _metric(label, value) {
@@ -277,7 +290,78 @@ class HaFlowStationCard extends HTMLElement {
     `;
   }
 
-  _timeslots(slots) {
+  _tabbedContent(slots, calls, devices, lastHeard, maxLastHeard) {
+    const availableTabs = [
+      {
+        id: "timeslots",
+        label: "Timeslots",
+        icon: "mdi:view-grid-outline",
+        count: 4,
+      },
+      ...(this._config.show_active_calls
+        ? [{
+            id: "active_calls",
+            label: "Aktive Calls",
+            icon: "mdi:phone-in-talk-outline",
+            count: calls.length,
+          }]
+        : []),
+      ...(this._config.show_registered_devices
+        ? [{
+            id: "registered_devices",
+            label: "Registrierte Geräte",
+            icon: "mdi:radio-handheld",
+            count: devices.length,
+          }]
+        : []),
+      ...(this._config.show_last_heard
+        ? [{
+            id: "last_heard",
+            label: "Zuletzt gehört",
+            icon: "mdi:history",
+            count: lastHeard.length,
+          }]
+        : []),
+    ];
+
+    if (!availableTabs.some((tab) => tab.id === this._activeTab)) {
+      this._activeTab = availableTabs[0].id;
+    }
+
+    const tabs = availableTabs
+      .map(
+        (tab) => `
+          <button
+            class="tab-button ${tab.id === this._activeTab ? "selected" : ""}"
+            data-tab="${tab.id}"
+            type="button"
+            role="tab"
+            aria-selected="${tab.id === this._activeTab}"
+          >
+            <ha-icon icon="${tab.icon}"></ha-icon>
+            <span>${tab.label}</span>
+            <span class="tab-count">${tab.count}</span>
+          </button>
+        `,
+      )
+      .join("");
+
+    const content = {
+      timeslots: () => this._timeslots(slots, true),
+      active_calls: () => this._activeCalls(calls, true),
+      registered_devices: () => this._registeredDevices(devices, true),
+      last_heard: () => this._lastHeard(lastHeard.slice(0, maxLastHeard), true),
+    }[this._activeTab]();
+
+    return `
+      <section class="panel tabs-panel">
+        <div class="tabs-scroll" role="tablist">${tabs}</div>
+        <div class="tab-content" role="tabpanel">${content}</div>
+      </section>
+    `;
+  }
+
+  _timeslots(slots, embedded = false) {
     const rows = ["1", "2", "3", "4"]
       .map((number) => {
         const slot = slots[number] || {};
@@ -303,10 +387,8 @@ class HaFlowStationCard extends HTMLElement {
       })
       .join("");
 
-    return `
-      <section class="panel table-panel">
-        <h2>Timeslots</h2>
-        <div class="table-scroll">
+    const table = `
+      <div class="table-scroll">
           <table>
             <thead>
               <tr>
@@ -317,12 +399,15 @@ class HaFlowStationCard extends HTMLElement {
             </thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>
-      </section>
+      </div>
     `;
+
+    return embedded
+      ? table
+      : `<section class="panel table-panel"><h2>Timeslots</h2>${table}</section>`;
   }
 
-  _activeCalls(calls) {
+  _activeCalls(calls, embedded = false) {
     const rows = calls.length
       ? calls
           .map(
@@ -345,10 +430,8 @@ class HaFlowStationCard extends HTMLElement {
           .join("")
       : this._emptyRow(11, "Keine aktiven Gespräche");
 
-    return `
-      <section class="panel table-panel">
-        <h2>Aktive Calls</h2>
-        <div class="table-scroll">
+    const table = `
+      <div class="table-scroll">
           <table>
             <thead><tr>
               <th>ID</th><th>Typ</th><th>Slot</th><th>Quelle (ISSI)</th>
@@ -357,12 +440,15 @@ class HaFlowStationCard extends HTMLElement {
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>
-      </section>
+      </div>
     `;
+
+    return embedded
+      ? table
+      : `<section class="panel table-panel"><h2>Aktive Calls</h2>${table}</section>`;
   }
 
-  _registeredDevices(devices) {
+  _registeredDevices(devices, embedded = false) {
     const rows = devices.length
       ? devices
           .map((device) => {
@@ -383,13 +469,8 @@ class HaFlowStationCard extends HTMLElement {
           .join("")
       : this._emptyRow(6, "Keine Geräte registriert");
 
-    return `
-      <section class="panel table-panel">
-        <div class="section-heading">
-          <h2>Registrierte Geräte</h2>
-          <span class="count-badge">${devices.length}</span>
-        </div>
-        <div class="table-scroll">
+    const table = `
+      <div class="table-scroll">
           <table>
             <thead><tr>
               <th>ISSI</th><th>Rufzeichen</th><th>Gruppen</th>
@@ -397,12 +478,23 @@ class HaFlowStationCard extends HTMLElement {
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>
-      </section>
+      </div>
     `;
+
+    return embedded
+      ? table
+      : `
+        <section class="panel table-panel">
+          <div class="section-heading">
+            <h2>Registrierte Geräte</h2>
+            <span class="count-badge">${devices.length}</span>
+          </div>
+          ${table}
+        </section>
+      `;
   }
 
-  _lastHeard(entries) {
+  _lastHeard(entries, embedded = false) {
     const rows = entries.length
       ? entries
           .map(
@@ -423,10 +515,8 @@ class HaFlowStationCard extends HTMLElement {
           .join("")
       : this._emptyRow(5, "Noch keine Aktivität");
 
-    return `
-      <section class="panel table-panel">
-        <h2>Zuletzt gehört</h2>
-        <div class="table-scroll">
+    const table = `
+      <div class="table-scroll">
           <table>
             <thead><tr>
               <th>Zeit</th><th>Aktivität</th><th>ISSI</th>
@@ -434,9 +524,12 @@ class HaFlowStationCard extends HTMLElement {
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>
-      </section>
+      </div>
     `;
+
+    return embedded
+      ? table
+      : `<section class="panel table-panel"><h2>Zuletzt gehört</h2>${table}</section>`;
   }
 
   _styles() {
@@ -617,6 +710,70 @@ class HaFlowStationCard extends HTMLElement {
         .table-panel h2 { margin: 0 4px 16px; }
         .table-scroll { overflow-x: auto; }
 
+        .tabs-panel { padding: 0; overflow: hidden; }
+
+        .tabs-scroll {
+          display: flex;
+          align-items: stretch;
+          gap: 4px;
+          padding: 8px;
+          overflow-x: auto;
+          border-bottom: 1px solid var(--fs-border);
+          scrollbar-width: thin;
+        }
+
+        .tab-button {
+          appearance: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          min-width: max-content;
+          padding: 11px 14px;
+          border: 0;
+          border-radius: 9px;
+          color: var(--secondary-text-color);
+          background: transparent;
+          font: inherit;
+          font-weight: 700;
+          cursor: pointer;
+          transition:
+            color .18s ease,
+            background .18s ease,
+            transform .18s ease;
+        }
+
+        .tab-button:hover {
+          color: var(--primary-text-color);
+          background: rgba(255,255,255,.045);
+        }
+
+        .tab-button:active { transform: scale(.98); }
+
+        .tab-button.selected {
+          color: var(--fs-green);
+          background: var(--fs-green-soft);
+        }
+
+        .tab-button ha-icon { --mdc-icon-size: 20px; }
+
+        .tab-count {
+          min-width: 22px;
+          padding: 2px 6px;
+          border-radius: 999px;
+          color: var(--secondary-text-color);
+          background: rgba(255,255,255,.075);
+          text-align: center;
+          font-size: .75rem;
+        }
+
+        .tab-button.selected .tab-count {
+          color: var(--fs-green);
+          background: rgba(57,209,38,.16);
+        }
+
+        .tab-content { padding: 16px; }
+
         table {
           width: 100%;
           border-collapse: collapse;
@@ -747,6 +904,10 @@ class HaFlowStationCard extends HTMLElement {
           .metrics { grid-template-columns: repeat(2, 1fr); }
           .metric:nth-child(even) { border-right: 0; }
           .base-panel { padding: 14px; }
+          .tab-button {
+            flex: 1 0 auto;
+            padding: 10px;
+          }
         }
 
         @media (max-width: 520px) {
