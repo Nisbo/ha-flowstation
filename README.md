@@ -24,14 +24,16 @@ A responsive Home Assistant custom card for monitoring a
 - Targeted updates: unrelated Home Assistant entity changes do not rerender the
   card
 
-## Required MQTT bridge
+## Requirements
 
 This card does not connect to FlowStation directly. It requires the companion
-`flowstation-mqtt` bridge, which reads the FlowStation WebSocket/API, publishes
-the data to MQTT and creates the Home Assistant sensor through MQTT Discovery.
+[flowstation-mqtt](https://github.com/Nisbo/flowstation-mqtt) bridge, which
+reads the FlowStation WebSocket/API, publishes the data to MQTT and creates the
+Home Assistant sensor through MQTT Discovery.
 
-The bridge is **not included in this card repository yet**. It will be published
-separately. The default entity expected by the card is:
+Install and configure the bridge before adding the card. Its installer checks
+the FlowStation and MQTT connections and creates the required sensor
+automatically. The default entity expected by the card is:
 
 ```text
 sensor.flowstation_flowstation
