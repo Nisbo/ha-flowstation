@@ -5,6 +5,8 @@ A responsive Home Assistant custom card for monitoring a
 
 [![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Nisbo&repository=ha-flowstation&category=plugin)
 
+![FlowStation Card dashboard](screenshots/dashboard.png)
+
 ## Features
 
 - Dashboard overview with four graphical TETRA Timeslot tiles
@@ -23,6 +25,63 @@ A responsive Home Assistant custom card for monitoring a
   compact Timeslot tiles
 - Targeted updates: unrelated Home Assistant entity changes do not rerender the
   card
+
+## Screenshots
+
+Click any preview to open the full-resolution image.
+
+<table>
+  <tr>
+    <td width="50%">
+      <strong>Base station</strong><br>
+      <a href="screenshots/base-station.png">
+        <img src="screenshots/base-station.png" alt="Base station view">
+      </a>
+    </td>
+    <td width="50%">
+      <strong>Timeslots</strong><br>
+      <a href="screenshots/timeslots.png">
+        <img src="screenshots/timeslots.png" alt="Timeslots view">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <strong>Active calls</strong><br>
+      <a href="screenshots/active-calls.png">
+        <img src="screenshots/active-calls.png" alt="Active calls view">
+      </a>
+    </td>
+    <td width="50%">
+      <strong>Registered devices</strong><br>
+      <a href="screenshots/registered-devices.png">
+        <img src="screenshots/registered-devices.png" alt="Registered devices view">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <strong>Last heard</strong><br>
+      <a href="screenshots/last-heard.png">
+        <img src="screenshots/last-heard.png" alt="Last heard view">
+      </a>
+    </td>
+    <td width="50%">
+      <strong>SDS</strong><br>
+      <a href="screenshots/sds.png">
+        <img src="screenshots/sds.png" alt="SDS log view">
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <strong>Visual configuration editor</strong><br>
+      <a href="screenshots/config-editor.png">
+        <img src="screenshots/config-editor.png" alt="Visual card configuration editor">
+      </a>
+    </td>
+  </tr>
+</table>
 
 ## Requirements
 
