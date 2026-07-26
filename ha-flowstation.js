@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.13.1";
+const CARD_VERSION = "0.13.2";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -26,6 +26,7 @@ class HaFlowStationCard extends HTMLElement {
       max_sds_entries: 20,
       default_tab: "dashboard",
       compact_timeslots: false,
+      localized_timestamps: true,
       hide_dashboard: false,
       hide_base_station: false,
       hide_timeslots: false,
@@ -42,6 +43,7 @@ class HaFlowStationCard extends HTMLElement {
       title: "Titel",
       default_tab: "Standard-Tab",
       compact_timeslots: "Kompakte Timeslot-Kacheln",
+      localized_timestamps: "Datumsangaben im Home-Assistant-Format",
       max_last_heard: "Angezeigte „Zuletzt gehört“-Einträge",
       max_sds_entries: "Angezeigte SDS-Einträge",
       hide_dashboard: "Tab „Dashboard“ ausblenden",
@@ -57,6 +59,7 @@ class HaFlowStationCard extends HTMLElement {
       entity: "MQTT-Discovery-Sensor der FlowStation-Bridge.",
       default_tab: "Dieser Tab wird beim ersten Öffnen der Karte angezeigt.",
       compact_timeslots: "Reduziert die Höhe der grafischen Timeslot-Kacheln ungefähr um die Hälfte.",
+      localized_timestamps: "Verwendet Sprache und 12-/24-Stundenformat des angemeldeten Home-Assistant-Benutzers.",
       max_last_heard: "Begrenzt die sichtbaren Tabellenzeilen. Der Zähler am Tab zeigt weiterhin die Gesamtanzahl der vorhandenen Einträge.",
       max_sds_entries: "Begrenzt die sichtbaren SDS-Zeilen. Die Bridge behält standardmäßig die letzten 50 Einträge.",
     };
@@ -88,6 +91,12 @@ class HaFlowStationCard extends HTMLElement {
             },
             {
               name: "compact_timeslots",
+              selector: {
+                boolean: {},
+              },
+            },
+            {
+              name: "localized_timestamps",
               selector: {
                 boolean: {},
               },
@@ -220,6 +229,7 @@ class HaFlowStationCard extends HTMLElement {
       max_sds_entries: 20,
       default_tab: "dashboard",
       compact_timeslots: false,
+      localized_timestamps: true,
       hide_dashboard: false,
       hide_base_station: false,
       hide_timeslots: false,
@@ -301,6 +311,56 @@ class HaFlowStationCard extends HTMLElement {
     return Number.isFinite(frequency)
       ? `${(frequency / 1_000_000).toFixed(4)} MHz`
       : "–";
+  }
+
+  _dateTime(value) {
+    if (!value || !this._config.localized_timestamps) {
+      return this._value(value);
+    }
+
+    const match = String(value).match(
+      /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})$/,
+    );
+    if (!match) return this._value(value);
+
+    const date = new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      Number(match[4]),
+      Number(match[5]),
+      Number(match[6]),
+    );
+    if (Number.isNaN(date.getTime())) return this._value(value);
+
+    const locale =
+      this._hass?.locale?.language ||
+      globalThis.navigator?.language ||
+      "de-DE";
+    const timeFormat = this._hass?.locale?.time_format;
+    const options = {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    };
+
+    if (["12", "am_pm"].includes(timeFormat)) {
+      options.hour12 = true;
+    }
+    if (["24", "twenty_four"].includes(timeFormat)) {
+      options.hour12 = false;
+    }
+
+    try {
+      return this._escape(
+        new Intl.DateTimeFormat(locale, options).format(date),
+      );
+    } catch {
+      return this._value(value);
+    }
   }
 
   _bool(value) {
@@ -1104,7 +1164,7 @@ class HaFlowStationCard extends HTMLElement {
       return `
         <span class="lip-undecoded" title="FlowStation übermittelt für diese binäre LIP-Nachricht keine Koordinaten.">
           <ha-icon icon="mdi:map-marker-question-outline"></ha-icon>
-          Binäre Position – nicht dekodiert
+          Position nicht von FlowStation bereitgestellt
         </span>
       `;
     }
@@ -1118,7 +1178,7 @@ class HaFlowStationCard extends HTMLElement {
           .map(
             (entry) => `
               <tr>
-                <td data-label="Zeit" class="sds-time">${this._value(entry.time)}</td>
+                <td data-label="Zeit" class="sds-time">${this._dateTime(entry.time)}</td>
                 <td data-label="Richtung">
                   <span class="direction-pill ${this._escape(entry.direction || "")}">
                     ${this._escape(this._sdsDirection(entry.direction))}

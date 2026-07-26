@@ -58,6 +58,7 @@ max_last_heard: 10
 max_sds_entries: 20
 default_tab: dashboard
 compact_timeslots: false
+localized_timestamps: true
    ```
 
 ## Optionen
@@ -70,6 +71,7 @@ compact_timeslots: false
 | `max_sds_entries` | `20` | Anzahl der angezeigten SDS-Einträge |
 | `default_tab` | `dashboard` | Beim ersten Laden geöffneter Tab |
 | `compact_timeslots` | `false` | Kompakte Dashboard-Timeslots mit etwa halber Höhe |
+| `localized_timestamps` | `true` | Vollständige Datumsangaben im Sprach- und Zeitformat des HA-Benutzers |
 | `hide_dashboard` | `false` | Tab „Dashboard“ ausblenden |
 | `hide_base_station` | `false` | Tab „Basisstation“ ausblenden |
 | `hide_timeslots` | `false` | Tab „Timeslots“ ausblenden |
@@ -88,6 +90,7 @@ max_last_heard: 15
 max_sds_entries: 25
 default_tab: sds
 compact_timeslots: true
+localized_timestamps: true
 hide_dashboard: false
 hide_base_station: false
 hide_timeslots: false
