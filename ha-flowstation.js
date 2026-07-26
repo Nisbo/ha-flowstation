@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.14.0";
+const CARD_VERSION = "0.14.1";
 
 const TRANSLATIONS = {
   de: {
@@ -69,6 +69,7 @@ const TRANSLATIONS = {
     position_unavailable: "Position nicht von FlowStation bereitgestellt",
     position_unavailable_hint: "FlowStation übermittelt für diese binäre LIP-Nachricht keine Koordinaten.",
     energy_hint: "Energy Economy Group {group}: ungefähr {seconds} s Aufwachintervall",
+    card_version: "FlowStation-Karte Version {version}",
   },
   en: {
     yes: "Yes",
@@ -132,6 +133,7 @@ const TRANSLATIONS = {
     position_unavailable: "Position not provided by FlowStation",
     position_unavailable_hint: "FlowStation does not provide coordinates for this binary LIP message.",
     energy_hint: "Energy Economy Group {group}: approximately {seconds} s wake-up interval",
+    card_version: "FlowStation Card version {version}",
   },
 };
 
@@ -866,6 +868,9 @@ class HaFlowStationCard extends HTMLElement {
             sdsLog,
             maxSdsEntries,
           )}
+          <div class="card-version" aria-label="${this._escape(this._t("card_version", { version: CARD_VERSION }))}">
+            FlowStation Card v${CARD_VERSION}
+          </div>
         </div>
       </ha-card>
     `;
@@ -1485,6 +1490,15 @@ class HaFlowStationCard extends HTMLElement {
           display: grid;
           gap: 16px;
           padding: 24px;
+        }
+
+        .card-version {
+          color: var(--secondary-text-color);
+          font-family: var(--code-font-family, monospace);
+          font-size: .68rem;
+          line-height: 1;
+          opacity: .58;
+          text-align: right;
         }
 
         .hero {
