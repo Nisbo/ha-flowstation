@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.13.0";
+const CARD_VERSION = "0.13.1";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -1047,7 +1047,9 @@ class HaFlowStationCard extends HTMLElement {
   }
 
   _sdsIdentity(entry, prefix) {
-    const issi = entry[`${prefix}_issi`];
+    const issi = prefix === "destination"
+      ? entry.dest_issi
+      : entry[`${prefix}_issi`];
     const callsign = entry[`${prefix}_callsign`];
     const flag = entry[`${prefix}_country_flag`];
 
@@ -1094,9 +1096,20 @@ class HaFlowStationCard extends HTMLElement {
       }
     }
 
-    return text
-      ? `<span class="sds-text">${this._escape(text)}</span>`
-      : `<span class="muted">[${this._escape(this._sdsProtocol(entry.protocol_id))}]</span>`;
+    if (text) {
+      return `<span class="sds-text">${this._escape(text)}</span>`;
+    }
+
+    if (Number(entry.protocol_id) === 10) {
+      return `
+        <span class="lip-undecoded" title="FlowStation übermittelt für diese binäre LIP-Nachricht keine Koordinaten.">
+          <ha-icon icon="mdi:map-marker-question-outline"></ha-icon>
+          Binäre Position – nicht dekodiert
+        </span>
+      `;
+    }
+
+    return `<span class="muted">[${this._escape(this._sdsProtocol(entry.protocol_id))}]</span>`;
   }
 
   _sdsLog(entries, embedded = false) {
@@ -1884,6 +1897,20 @@ class HaFlowStationCard extends HTMLElement {
         .lip-link ha-icon {
           width: 18px;
           height: 18px;
+        }
+
+        .lip-undecoded {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: var(--secondary-text-color);
+          white-space: nowrap;
+        }
+
+        .lip-undecoded ha-icon {
+          width: 18px;
+          height: 18px;
+          color: #ffb74d;
         }
 
         .group-chips {

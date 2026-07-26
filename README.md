@@ -16,8 +16,8 @@ Die Karte zeigt:
 - registrierte Funkgeräte mit Landesflagge, Empfangsanzeige, Gruppen-Chips
   und laufend aktualisierter „Zuletzt gesehen“-Zeit
 - „Zuletzt gehört“-Historie
-- SDS-Log mit Richtung, Absender, Ziel, Nachrichtenart und anklickbaren
-  LIP-Koordinaten
+- SDS-Log mit Richtung, Absender, Ziel und Nachrichtenart; von FlowStation
+  dekodierte LIP-Koordinaten werden als anklickbarer Kartenlink dargestellt
 
 ## Voraussetzung
 
