@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.9.0";
+const CARD_VERSION = "0.10.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -401,6 +401,30 @@ class HaFlowStationCard extends HTMLElement {
           )
           .join("")}
       </div>
+    `;
+  }
+
+  _energySaving(mode) {
+    const value = Number(mode);
+    if (!Number.isFinite(value) || value <= 0) {
+      return `<span class="muted">–</span>`;
+    }
+
+    const normalized = Math.max(1, Math.min(7, Math.round(value)));
+    const quality =
+      normalized <= 2 ? "low" :
+      normalized <= 4 ? "medium" :
+      normalized === 5 ? "high" : "very-high";
+
+    return `
+      <span
+        class="energy-pill ${quality}"
+        title="Energy Economy Group ${normalized}: ungefähr ${normalized} s Aufwachintervall"
+      >
+        <ha-icon icon="mdi:battery-clock-outline"></ha-icon>
+        EG${normalized}
+        <small>~${normalized} s</small>
+      </span>
     `;
   }
 
@@ -881,8 +905,12 @@ class HaFlowStationCard extends HTMLElement {
             (device) => `
               <tr>
                 <td data-label="ISSI">${this._value(device.issi)}</td>
-                <td data-label="Land"><span class="country-flag">${this._value(device.country_flag)}</span></td>
-                <td data-label="Rufzeichen"><strong>${this._value(device.callsign)}</strong></td>
+                <td data-label="Rufzeichen">
+                  <span class="callsign">
+                    ${device.country_flag ? `<span class="country-flag">${this._escape(device.country_flag)}</span>` : ""}
+                    <strong>${this._value(device.callsign)}</strong>
+                  </span>
+                </td>
                 <td data-label="Gruppen">${this._groupChips(device)}</td>
                 <td data-label="Empfang">${this._rssiMeter(device.rssi_dbfs)}</td>
                 <td
@@ -890,18 +918,18 @@ class HaFlowStationCard extends HTMLElement {
                   data-last-seen-at="${this._value(device.last_seen_at, "")}"
                   data-last-seen-fallback="${this._value(device.last_seen_secs_ago, "0")}"
                 >${this._lastSeen(device)}</td>
-                <td data-label="Energiesparen">Modus ${this._value(device.energy_saving_mode, "0")}</td>
+                <td data-label="Energiesparen">${this._energySaving(device.energy_saving_mode)}</td>
               </tr>
             `,
           )
           .join("")
-      : this._emptyRow(7, "Keine Geräte registriert");
+      : this._emptyRow(6, "Keine Geräte registriert");
 
     const table = `
       <div class="table-scroll">
           <table>
             <thead><tr>
-              <th>ISSI</th><th>Land</th><th>Rufzeichen</th><th>Gruppen</th>
+              <th>ISSI</th><th>Rufzeichen</th><th>Gruppen</th>
               <th>Empfang</th><th>Zuletzt gesehen</th><th>Energiesparen</th>
             </tr></thead>
             <tbody>${rows}</tbody>
@@ -1585,6 +1613,13 @@ class HaFlowStationCard extends HTMLElement {
           line-height: 1;
         }
 
+        .callsign {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+        }
+
         .group-chips {
           display: flex;
           flex-wrap: wrap;
@@ -1600,8 +1635,9 @@ class HaFlowStationCard extends HTMLElement {
           padding: 3px 7px;
           border: 1px solid var(--fs-border);
           border-radius: 999px;
-          color: var(--secondary-text-color);
-          background: rgba(255,255,255,.035);
+          border-color: rgba(66,165,245,.2);
+          color: #64b5f6;
+          background: rgba(66,165,245,.09);
           font-family: var(--code-font-family, monospace);
           font-size: .72rem;
         }
@@ -1656,6 +1692,45 @@ class HaFlowStationCard extends HTMLElement {
 
         .rssi-meter.weak .rssi-bars i.filled {
           background: var(--fs-red);
+        }
+
+        .energy-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 4px 8px;
+          border-radius: 999px;
+          font-size: .72rem;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .energy-pill ha-icon { --mdc-icon-size: 14px; }
+
+        .energy-pill small {
+          font-size: .65rem;
+          font-weight: 500;
+          opacity: .75;
+        }
+
+        .energy-pill.low {
+          color: var(--fs-green);
+          background: var(--fs-green-soft);
+        }
+
+        .energy-pill.medium {
+          color: #55b8ff;
+          background: rgba(85,184,255,.12);
+        }
+
+        .energy-pill.high {
+          color: #ffb74d;
+          background: rgba(255,183,77,.12);
+        }
+
+        .energy-pill.very-high {
+          color: var(--fs-red);
+          background: rgba(239,83,80,.12);
         }
 
         .section-heading {
