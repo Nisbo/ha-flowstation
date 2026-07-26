@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.7.0";
+const CARD_VERSION = "0.8.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -465,10 +465,7 @@ class HaFlowStationCard extends HTMLElement {
   }
 
   _tabVisible(name) {
-    return (
-      this._config[`hide_${name}`] !== true &&
-      this._config[`show_${name}`] !== false
-    );
+    return this._config[`hide_${name}`] !== true;
   }
 
   _tabbedContent(
