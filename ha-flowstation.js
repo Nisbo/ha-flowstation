@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.12.0";
+const CARD_VERSION = "0.13.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -23,6 +23,7 @@ class HaFlowStationCard extends HTMLElement {
       entity: "sensor.flowstation_flowstation",
       title: "FlowStation",
       max_last_heard: 10,
+      max_sds_entries: 20,
       default_tab: "dashboard",
       compact_timeslots: false,
       hide_dashboard: false,
@@ -31,6 +32,7 @@ class HaFlowStationCard extends HTMLElement {
       hide_active_calls: false,
       hide_registered_devices: false,
       hide_last_heard: false,
+      hide_sds: false,
     };
   }
 
@@ -41,12 +43,14 @@ class HaFlowStationCard extends HTMLElement {
       default_tab: "Standard-Tab",
       compact_timeslots: "Kompakte Timeslot-Kacheln",
       max_last_heard: "Angezeigte „Zuletzt gehört“-Einträge",
+      max_sds_entries: "Angezeigte SDS-Einträge",
       hide_dashboard: "Tab „Dashboard“ ausblenden",
       hide_base_station: "Tab „Basisstation“ ausblenden",
       hide_timeslots: "Tab „Timeslots“ ausblenden",
       hide_active_calls: "Tab „Aktive Calls“ ausblenden",
       hide_registered_devices: "Tab „Registrierte Geräte“ ausblenden",
       hide_last_heard: "Tab „Zuletzt gehört“ ausblenden",
+      hide_sds: "Tab „SDS“ ausblenden",
     };
 
     const helpers = {
@@ -54,6 +58,7 @@ class HaFlowStationCard extends HTMLElement {
       default_tab: "Dieser Tab wird beim ersten Öffnen der Karte angezeigt.",
       compact_timeslots: "Reduziert die Höhe der grafischen Timeslot-Kacheln ungefähr um die Hälfte.",
       max_last_heard: "Begrenzt die sichtbaren Tabellenzeilen. Der Zähler am Tab zeigt weiterhin die Gesamtanzahl der vorhandenen Einträge.",
+      max_sds_entries: "Begrenzt die sichtbaren SDS-Zeilen. Die Bridge behält standardmäßig die letzten 50 Einträge.",
     };
 
     return {
@@ -98,6 +103,17 @@ class HaFlowStationCard extends HTMLElement {
                 },
               },
             },
+            {
+              name: "max_sds_entries",
+              selector: {
+                number: {
+                  min: 1,
+                  max: 100,
+                  step: 1,
+                  mode: "box",
+                },
+              },
+            },
           ],
         },
         {
@@ -121,6 +137,7 @@ class HaFlowStationCard extends HTMLElement {
                       label: "Registrierte Geräte",
                     },
                     { value: "last_heard", label: "Zuletzt gehört" },
+                    { value: "sds", label: "SDS" },
                   ],
                 },
               },
@@ -161,6 +178,12 @@ class HaFlowStationCard extends HTMLElement {
                 boolean: {},
               },
             },
+            {
+              name: "hide_sds",
+              selector: {
+                boolean: {},
+              },
+            },
           ],
         },
       ],
@@ -176,6 +199,7 @@ class HaFlowStationCard extends HTMLElement {
             "active_calls",
             "registered_devices",
             "last_heard",
+            "sds",
           ].includes(config.default_tab)
         ) {
           throw new Error("Ungültiger Standard-Tab.");
@@ -193,6 +217,7 @@ class HaFlowStationCard extends HTMLElement {
       entity: "sensor.flowstation_flowstation",
       title: "FlowStation",
       max_last_heard: 10,
+      max_sds_entries: 20,
       default_tab: "dashboard",
       compact_timeslots: false,
       hide_dashboard: false,
@@ -201,6 +226,7 @@ class HaFlowStationCard extends HTMLElement {
       hide_active_calls: false,
       hide_registered_devices: false,
       hide_last_heard: false,
+      hide_sds: false,
       ...config,
     };
     this._activeTab = this._config.default_tab;
@@ -494,6 +520,9 @@ class HaFlowStationCard extends HTMLElement {
     const lastHeard = Array.isArray(attributes.last_heard)
       ? attributes.last_heard
       : [];
+    const sdsLog = Array.isArray(attributes.sds_log)
+      ? attributes.sds_log
+      : [];
     const unavailable = ["unavailable", "unknown"].includes(entity.state);
     const bridgeOnline = !unavailable && Boolean(attributes.bridge_online);
     const flowstationOnline =
@@ -502,6 +531,10 @@ class HaFlowStationCard extends HTMLElement {
     const maxLastHeard = Math.max(
       1,
       Number(this._config.max_last_heard) || 10,
+    );
+    const maxSdsEntries = Math.max(
+      1,
+      Number(this._config.max_sds_entries) || 20,
     );
 
     this.shadowRoot.innerHTML = `
@@ -530,6 +563,8 @@ class HaFlowStationCard extends HTMLElement {
             devices,
             lastHeard,
             maxLastHeard,
+            sdsLog,
+            maxSdsEntries,
           )}
         </div>
       </ha-card>
@@ -566,6 +601,8 @@ class HaFlowStationCard extends HTMLElement {
     devices,
     lastHeard,
     maxLastHeard,
+    sdsLog,
+    maxSdsEntries,
   ) {
     const availableTabs = [
       ...(this._tabVisible("dashboard")
@@ -616,6 +653,14 @@ class HaFlowStationCard extends HTMLElement {
             count: lastHeard.length,
           }]
         : []),
+      ...(this._tabVisible("sds")
+        ? [{
+            id: "sds",
+            label: "SDS",
+            icon: "mdi:message-text-outline",
+            count: sdsLog.length,
+          }]
+        : []),
     ];
 
     if (!availableTabs.length) {
@@ -659,6 +704,7 @@ class HaFlowStationCard extends HTMLElement {
       active_calls: () => this._activeCalls(calls, true),
       registered_devices: () => this._registeredDevices(devices, true),
       last_heard: () => this._lastHeard(lastHeard.slice(0, maxLastHeard), true),
+      sds: () => this._sdsLog(sdsLog.slice(0, maxSdsEntries), true),
     }[this._activeTab]();
 
     return `
@@ -974,6 +1020,130 @@ class HaFlowStationCard extends HTMLElement {
     return embedded
       ? table
       : `<section class="panel table-panel"><h2>Zuletzt gehört</h2>${table}</section>`;
+  }
+
+  _sdsDirection(direction) {
+    const labels = {
+      rx: "RX",
+      net: "NET",
+      tx: "TX",
+    };
+    return labels[direction] || String(direction || "?").toUpperCase();
+  }
+
+  _sdsProtocol(protocolId) {
+    const labels = {
+      2: "Text",
+      9: "Text",
+      10: "LIP-Position",
+      12: "Mehrteilig",
+      128: "Text",
+      130: "Text",
+      137: "Text",
+      218: "Status",
+      220: "Home Display",
+    };
+    return labels[Number(protocolId)] || `PID ${protocolId ?? "?"}`;
+  }
+
+  _sdsIdentity(entry, prefix) {
+    const issi = entry[`${prefix}_issi`];
+    const callsign = entry[`${prefix}_callsign`];
+    const flag = entry[`${prefix}_country_flag`];
+
+    return `
+      <div class="sds-identity">
+        <strong>${this._value(issi)}</strong>
+        ${callsign ? `
+          <span class="callsign">
+            ${flag ? `<span class="country-flag">${this._escape(flag)}</span>` : ""}
+            ${this._escape(callsign)}
+          </span>
+        ` : ""}
+      </div>
+    `;
+  }
+
+  _sdsMessage(entry) {
+    const text = String(entry.text || "");
+    const lip = text.match(
+      /^LIP position:\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/i,
+    );
+
+    if (lip) {
+      const latitude = Number(lip[1]);
+      const longitude = Number(lip[2]);
+
+      if (
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180
+      ) {
+        const coordinates = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+        const mapUrl =
+          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coordinates)}`;
+        return `
+          <a class="lip-link" href="${mapUrl}" target="_blank" rel="noopener noreferrer">
+            <ha-icon icon="mdi:map-marker"></ha-icon>
+            <span>${this._escape(coordinates)}</span>
+          </a>
+        `;
+      }
+    }
+
+    return text
+      ? `<span class="sds-text">${this._escape(text)}</span>`
+      : `<span class="muted">[${this._escape(this._sdsProtocol(entry.protocol_id))}]</span>`;
+  }
+
+  _sdsLog(entries, embedded = false) {
+    const rows = entries.length
+      ? entries
+          .map(
+            (entry) => `
+              <tr>
+                <td data-label="Zeit" class="sds-time">${this._value(entry.time)}</td>
+                <td data-label="Richtung">
+                  <span class="direction-pill ${this._escape(entry.direction || "")}">
+                    ${this._escape(this._sdsDirection(entry.direction))}
+                  </span>
+                </td>
+                <td data-label="Von">${this._sdsIdentity(entry, "source")}</td>
+                <td data-label="Art">
+                  <span class="protocol-chip ${Number(entry.protocol_id) === 10 ? "lip" : ""}">
+                    ${this._escape(this._sdsProtocol(entry.protocol_id))}
+                  </span>
+                </td>
+                <td data-label="An">
+                  ${entry.is_group
+                    ? `<span class="target-chip group">${this._value(entry.dest_issi)}</span>`
+                    : this._sdsIdentity(entry, "destination")}
+                </td>
+                <td data-label="Nachricht" class="sds-message">${this._sdsMessage(entry)}</td>
+              </tr>
+            `,
+          )
+          .join("")
+      : this._emptyRow(6, "Noch keine SDS-Nachrichten");
+
+    const table = `
+      <div class="table-scroll">
+        <table class="sds-table">
+          <thead><tr>
+            <th>Zeit</th><th>Richtung</th><th>Von</th>
+            <th>Art</th><th>An</th><th>Nachricht / Position</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+
+    return embedded
+      ? table
+      : `<section class="panel table-panel"><h2>SDS</h2>${table}</section>`;
   }
 
   _styles() {
@@ -1624,6 +1794,96 @@ class HaFlowStationCard extends HTMLElement {
           align-items: center;
           justify-content: center;
           gap: 7px;
+        }
+
+        .sds-time {
+          white-space: nowrap;
+          font-family: var(--code-font-family, monospace);
+          font-variant-numeric: tabular-nums;
+        }
+
+        .sds-identity {
+          display: grid;
+          justify-items: center;
+          gap: 4px;
+          font-family: var(--code-font-family, monospace);
+        }
+
+        .sds-identity .callsign {
+          color: var(--secondary-text-color);
+          font-family: inherit;
+          font-size: .72rem;
+        }
+
+        .sds-identity .country-flag {
+          font-size: 1rem;
+        }
+
+        .direction-pill,
+        .protocol-chip {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 9px;
+          border-radius: 999px;
+          font-size: .72rem;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+
+        .direction-pill {
+          color: var(--secondary-text-color);
+          background: rgba(255,255,255,.06);
+        }
+
+        .direction-pill.rx {
+          color: var(--fs-green);
+          background: var(--fs-green-soft);
+        }
+
+        .direction-pill.net {
+          color: #64b5f6;
+          background: rgba(66,165,245,.11);
+        }
+
+        .direction-pill.tx {
+          color: #ffb74d;
+          background: rgba(255,183,77,.11);
+        }
+
+        .protocol-chip {
+          color: #b388ff;
+          background: rgba(179,136,255,.12);
+        }
+
+        .protocol-chip.lip {
+          color: #64b5f6;
+          background: rgba(66,165,245,.12);
+        }
+
+        .sds-message {
+          min-width: 210px;
+          text-align: left;
+          white-space: normal;
+        }
+
+        .sds-text {
+          word-break: break-word;
+        }
+
+        .lip-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #64b5f6;
+          font-weight: 700;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
+        .lip-link:hover { text-decoration: underline; }
+        .lip-link ha-icon {
+          width: 18px;
+          height: 18px;
         }
 
         .group-chips {

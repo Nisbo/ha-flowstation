@@ -16,6 +16,8 @@ Die Karte zeigt:
 - registrierte Funkgeräte mit Landesflagge, Empfangsanzeige, Gruppen-Chips
   und laufend aktualisierter „Zuletzt gesehen“-Zeit
 - „Zuletzt gehört“-Historie
+- SDS-Log mit Richtung, Absender, Ziel, Nachrichtenart und anklickbaren
+  LIP-Koordinaten
 
 ## Voraussetzung
 
@@ -53,6 +55,7 @@ type: custom:ha-flowstation-card
 entity: sensor.flowstation_flowstation
 title: FlowStation
 max_last_heard: 10
+max_sds_entries: 20
 default_tab: dashboard
 compact_timeslots: false
    ```
@@ -64,6 +67,7 @@ compact_timeslots: false
 | `entity` | `sensor.flowstation_flowstation` | FlowStation-Sensor |
 | `title` | `FlowStation` | Überschrift |
 | `max_last_heard` | `10` | Anzahl der angezeigten Einträge |
+| `max_sds_entries` | `20` | Anzahl der angezeigten SDS-Einträge |
 | `default_tab` | `dashboard` | Beim ersten Laden geöffneter Tab |
 | `compact_timeslots` | `false` | Kompakte Dashboard-Timeslots mit etwa halber Höhe |
 | `hide_dashboard` | `false` | Tab „Dashboard“ ausblenden |
@@ -72,6 +76,7 @@ compact_timeslots: false
 | `hide_active_calls` | `false` | Tab „Aktive Calls“ ausblenden |
 | `hide_registered_devices` | `false` | Tab „Registrierte Geräte“ ausblenden |
 | `hide_last_heard` | `false` | Tab „Zuletzt gehört“ ausblenden |
+| `hide_sds` | `false` | Tab „SDS“ ausblenden |
 
 ## Vollständiges Beispiel
 
@@ -80,7 +85,8 @@ type: custom:ha-flowstation-card
 entity: sensor.flowstation_flowstation
 title: FlowStation
 max_last_heard: 15
-default_tab: last_heard
+max_sds_entries: 25
+default_tab: sds
 compact_timeslots: true
 hide_dashboard: false
 hide_base_station: false
@@ -88,6 +94,7 @@ hide_timeslots: false
 hide_active_calls: false
 hide_registered_devices: false
 hide_last_heard: false
+hide_sds: false
 ```
 
 Für `default_tab` sind folgende Werte möglich:
@@ -99,6 +106,7 @@ base_station
 active_calls
 registered_devices
 last_heard
+sds
 ```
 
 ## Lizenz
