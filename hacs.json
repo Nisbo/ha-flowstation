@@ -1,0 +1,6 @@
+{
+  "name": "FlowStation Card",
+  "content_in_root": true,
+  "filename": "ha-flowstation.js",
+  "render_readme": true
+}
