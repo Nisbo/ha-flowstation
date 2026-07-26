@@ -4,7 +4,7 @@
  * License: MIT
  */
 
-const CARD_VERSION = "0.5.0";
+const CARD_VERSION = "0.6.0";
 
 class HaFlowStationCard extends HTMLElement {
   constructor() {
@@ -27,6 +27,146 @@ class HaFlowStationCard extends HTMLElement {
       max_last_heard: 10,
       default_tab: "dashboard",
       compact_timeslots: false,
+      show_active_calls: true,
+      show_registered_devices: true,
+      show_last_heard: true,
+    };
+  }
+
+  static getConfigForm() {
+    const labels = {
+      entity: "FlowStation-Sensor",
+      title: "Titel",
+      default_tab: "Standard-Tab",
+      compact_timeslots: "Kompakte Timeslot-Kacheln",
+      max_last_heard: "Anzahl „Zuletzt gehört“",
+      show_active_calls: "Tab „Aktive Calls“ anzeigen",
+      show_registered_devices: "Tab „Registrierte Geräte“ anzeigen",
+      show_last_heard: "Tab „Zuletzt gehört“ anzeigen",
+    };
+
+    const helpers = {
+      entity: "MQTT-Discovery-Sensor der FlowStation-Bridge.",
+      default_tab: "Dieser Tab wird beim ersten Öffnen der Karte angezeigt.",
+      compact_timeslots: "Reduziert die Höhe der grafischen Timeslot-Kacheln ungefähr um die Hälfte.",
+      max_last_heard: "Begrenzt nur die Anzeige; die Bridge behält weiterhin ihre Historie.",
+    };
+
+    return {
+      schema: [
+        {
+          type: "grid",
+          name: "",
+          flatten: true,
+          column_min_width: "220px",
+          schema: [
+            {
+              name: "entity",
+              required: true,
+              selector: {
+                entity: {
+                  filter: {
+                    domain: "sensor",
+                  },
+                },
+              },
+            },
+            {
+              name: "title",
+              selector: {
+                text: {},
+              },
+            },
+            {
+              name: "default_tab",
+              selector: {
+                select: {
+                  mode: "dropdown",
+                  options: [
+                    { value: "dashboard", label: "Dashboard" },
+                    { value: "base_station", label: "Basisstation" },
+                    { value: "timeslots", label: "Timeslots" },
+                    { value: "active_calls", label: "Aktive Calls" },
+                    {
+                      value: "registered_devices",
+                      label: "Registrierte Geräte",
+                    },
+                    { value: "last_heard", label: "Zuletzt gehört" },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        {
+          type: "expandable",
+          name: "",
+          title: "Darstellung",
+          flatten: true,
+          schema: [
+            {
+              name: "compact_timeslots",
+              selector: {
+                boolean: {},
+              },
+            },
+            {
+              name: "max_last_heard",
+              selector: {
+                number: {
+                  min: 1,
+                  max: 50,
+                  step: 1,
+                  mode: "box",
+                },
+              },
+            },
+          ],
+        },
+        {
+          type: "expandable",
+          name: "",
+          title: "Bereiche",
+          flatten: true,
+          schema: [
+            {
+              name: "show_active_calls",
+              selector: {
+                boolean: {},
+              },
+            },
+            {
+              name: "show_registered_devices",
+              selector: {
+                boolean: {},
+              },
+            },
+            {
+              name: "show_last_heard",
+              selector: {
+                boolean: {},
+              },
+            },
+          ],
+        },
+      ],
+      computeLabel: (schema) => labels[schema.name],
+      computeHelper: (schema) => helpers[schema.name],
+      assertConfig: (config) => {
+        if (
+          config.default_tab !== undefined &&
+          ![
+            "dashboard",
+            "base_station",
+            "timeslots",
+            "active_calls",
+            "registered_devices",
+            "last_heard",
+          ].includes(config.default_tab)
+        ) {
+          throw new Error("Ungültiger Standard-Tab.");
+        }
+      },
     };
   }
 
@@ -39,6 +179,8 @@ class HaFlowStationCard extends HTMLElement {
       entity: "sensor.flowstation_flowstation",
       title: "FlowStation",
       max_last_heard: 10,
+      default_tab: "dashboard",
+      compact_timeslots: false,
       show_active_calls: true,
       show_registered_devices: true,
       show_last_heard: true,

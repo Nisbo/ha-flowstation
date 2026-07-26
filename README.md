@@ -2,6 +2,10 @@
 
 Eine responsive Custom Card für die Darstellung einer FlowStation in Home Assistant.
 
+Die Karte besitzt einen integrierten visuellen Konfigurationseditor auf Basis
+von Home Assistants `getConfigForm`-API. Sie kann daher direkt über die
+Dashboard-Oberfläche konfiguriert werden; YAML bleibt weiterhin möglich.
+
 Die Karte zeigt:
 
 - Status von MQTT-Bridge, FlowStation und Brew
