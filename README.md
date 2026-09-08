@@ -100,6 +100,12 @@ sensor.flowstation_flowstation
 
 The entity ID can be changed in the visual card editor or in YAML.
 
+It was reported that on at least one installation the default entity was:
+```text
+sensor.flowstation 
+```
+Just search for Flowstation in the GUI Editor
+
 ## Installation with HACS
 
 ### Open directly in HACS
